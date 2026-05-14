@@ -1,4 +1,4 @@
-# NWS Staffing Analysis — COW API Client
+# NWS Staffing Analysis - COW API Client
 # Developed with assistance from Claude Code (Anthropic)
 #
 # Handles communication with the IEM Convective Outlook Warning (COW) API.

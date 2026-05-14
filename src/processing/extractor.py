@@ -1,15 +1,15 @@
-# NWS Staffing Analysis — COW Data Extractor
+# NWS Staffing Analysis - COW Data Extractor
 # Developed with assistance from Claude Code (Anthropic)
 #
 # Reads raw COW JSON files collected by COWCollector and extracts two
 # tables representing the direct, uncleaned content of the source data:
 #
-#   events        — one row per warning event issued by a WFO
-#   stormreports  — one row per Local Storm Report (LSR) linked to the
-#                   events table via the 'events' foreign key column
+#   events       - one row per warning event issued by a WFO
+#   stormreports - one row per Local Storm Report (LSR) linked to the
+#                  events table via the 'events' foreign key column
 #
 # Geometry fields are excluded; the analysis is statistical, not spatial.
-# Output is written as CSV to data/extracted/ — an immutable checkpoint
+# Output is written as CSV to data/extracted/, an immutable checkpoint
 # of the flattened source data before any cleaning decisions are applied.
 
 import json
@@ -26,7 +26,7 @@ class COWExtractor:
 
     Reads every {WFO}_{YEAR}.json file in the raw data directory, flattens
     the GeoJSON feature properties into rows, and adds wfo and year columns
-    derived from the filename. Geometry is dropped — the analysis is
+    derived from the filename. Geometry is dropped because the analysis is
     statistical, not spatial.
 
     Output is written to the extracted directory, which serves as an
@@ -71,7 +71,7 @@ class COWExtractor:
 
             rows = [feat["properties"] for feat in features]
             df = pd.DataFrame(rows)
-            # Drop API-supplied wfo/year — we use filename-derived values as
+            # Drop API-supplied wfo/year and use filename-derived values as
             # the authoritative source to ensure consistency across all files.
             df.drop(columns=["wfo", "year"], errors="ignore", inplace=True)
             df.insert(0, "wfo", wfo)
@@ -114,7 +114,7 @@ class COWExtractor:
 
             rows = [feat["properties"] for feat in features]
             df = pd.DataFrame(rows)
-            # Drop API-supplied wfo/year — we use filename-derived values as
+            # Drop API-supplied wfo/year and use filename-derived values as
             # the authoritative source to ensure consistency across all files.
             df.drop(columns=["wfo", "year"], errors="ignore", inplace=True)
             df.insert(0, "wfo", wfo)

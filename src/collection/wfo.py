@@ -1,4 +1,4 @@
-# NWS Staffing Analysis — WFO Registry
+# NWS Staffing Analysis - WFO Registry
 # Developed with assistance from Claude Code (Anthropic)
 #
 # Loads the list of NWS Weather Forecast Offices (WFOs) from a CSV file

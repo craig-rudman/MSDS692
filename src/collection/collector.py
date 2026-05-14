@@ -1,4 +1,4 @@
-# NWS Staffing Analysis — COW Data Collector
+# NWS Staffing Analysis - COW Data Collector
 # Developed with assistance from Claude Code (Anthropic)
 #
 # Orchestrates the full data collection run: iterates all WFOs across all
@@ -84,7 +84,7 @@ class COWCollector:
                 time.sleep(self.rate_limit)
 
         summary = {"wrote": wrote, "skipped": skipped, "failed": failed}
-        log.info(f"Collection complete — {summary}")
+        log.info(f"Collection complete: {summary}")
         return summary
 
     def __repr__(self) -> str:
