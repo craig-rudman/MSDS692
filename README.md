@@ -41,6 +41,8 @@ Three tables extracted from the raw JSON:
 - **Primary metrics:** POD, FAR, CSI, and avg lead time derived from event-level data
 - **Staffing proxy:** Year-over-year change in unique `fcster` values within each WFO
 
+![Contingency table defining POD, FAR, and CSI](img/contingency_table.png)
+
 ## Notebooks
 
 | Notebook | Purpose |
