@@ -18,11 +18,11 @@ Did NWS staffing cuts in 2025 result in statistically significant changes in war
 ```
 data/
 ├── wfo_list.csv
-├── raw/
+├── 01_collection/
 │   └── COW/
 │       └── {WFO}_{YEAR}.json   # one file per WFO-year, immutable
-├── extracted/                  # flattened CSV, immutable checkpoint before cleaning
-└── processed/                  # cleaned, analysis-ready files
+├── 02_extraction/              # flattened CSV, immutable checkpoint before cleaning
+└── 03_cleaning/                # cleaned, analysis-ready files
 ```
 
 ## Data Model
@@ -31,15 +31,14 @@ Three tables extracted from the raw JSON:
 
 | Table | Grain | Key fields |
 |---|---|---|
-| `events` | One row per warning event | `id`, `wfo`, `year`, `phenomena`, `fcster`, `issue`, `expire`, `verify`, `lead0` |
-| `stormreports` | One row per LSR | `wfo`, `year`, `valid`, `lsrtype`, `warned`, `leadtime`, `events` (FK to events.id) |
-| *(fcster analysis)* | TBD; unique forecasters per WFO per year | Derived from `events.fcster` |
+| `events` | One row per warning event | `wfo`, `year`, `phenomena`, `issue`, `expire`, `verify`, `lead0`, `product_id` |
+| `stormreports` | One row per LSR | `wfo`, `year`, `valid`, `lsrtype`, `warned`, `leadtime`, `events` (FK to `events.product_id`) |
 
 ## Analysis Design
 
 - **Pre/post split:** 2020-2024 baseline, 2025 treatment
 - **Primary metrics:** POD, FAR, CSI, and avg lead time derived from event-level data
-- **Staffing proxy:** Year-over-year change in unique `fcster` values within each WFO
+- **Staffing treatment:** 2025 NWS staffing cuts treated as a system-wide intervention; no WFO-level staffing covariate (see Methodological Notes)
 
 ![Contingency table defining POD, FAR, and CSI](img/contingency_table.png)
 
@@ -57,7 +56,7 @@ Three tables extracted from the raw JSON:
 ## Methodological Notes
 
 1. **LSR underreporting:** LSRs are filed voluntarily; miss rates should be interpreted as "among reported events." A drop in unwarned reports in 2025 could reflect fewer LSRs filed, not better performance.
-2. **`fcster` field quality:** Format varies by WFO (last names, initials, badge numbers). Cross-WFO headcount comparisons are invalid. Within-WFO year-over-year changes may be valid, pending verification of within-WFO format consistency.
+2. **No WFO-level staffing covariate:** `fcster` was investigated as a staffing proxy but abandoned — rolling 3-month analysis showed chronic format mixing (badge numbers, last names, initials coexisting) in 118 of 122 WFOs, making unique-count comparisons unreliable. No public WFO-level staffing dataset exists. The analysis treats 2025 as a system-wide treatment without a per-office staffing dose variable.
 3. **Magnitude field:** Not comparable across phenomena (EF scale for TO, mph for SV, inches for FF). Must split by `lsrtype` before any magnitude analysis.
 4. **Small-sample WFOs:** WFOs with very few events in a year will produce unreliable per-WFO statistics. A minimum events threshold may be needed.
 5. **Non-CONUS offices:** Alaska, Hawaii, Guam, and Puerto Rico have fundamentally different weather patterns. Consider flagging or excluding from the main analysis.

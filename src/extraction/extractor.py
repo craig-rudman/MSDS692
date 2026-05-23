@@ -9,7 +9,7 @@
 #                  events table via the 'events' foreign key column
 #
 # Geometry fields are excluded; the analysis is statistical, not spatial.
-# Output is written as CSV to data/extracted/, an immutable checkpoint
+# Output is written as CSV to data/02_extraction/, an immutable checkpoint
 # of the flattened source data before any cleaning decisions are applied.
 
 import json
@@ -31,7 +31,7 @@ class COWExtractor:
 
     Output is written to the extracted directory, which serves as an
     immutable checkpoint before cleaning. Cleaning decisions are applied
-    separately in 03_cleaning.ipynb and written to data/processed/.
+    separately in 03_cleaning.ipynb and written to data/03_cleaning/.
     """
 
     def __init__(self, raw_dir: Path, extracted_dir: Path):

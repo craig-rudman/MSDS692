@@ -66,13 +66,17 @@ class COWClient:
         Raises:
             RuntimeError: If all retry attempts fail.
         """
-        params = {
-            "wfo": wfo,
-            "phenomena": ",".join(self.phenomena),
-            "lsrtype": ",".join(self.phenomena),
-            "begints": f"{year}-01-01T00:00Z",
-            "endts": f"{year + 1}-01-01T00:00Z",
-        }
+        # IEM COW API requires repeated params (phenomena=TO&phenomena=SV),
+        # not comma-joined strings (phenomena=TO,SV), to filter multiple phenomena.
+        params = (
+            [("wfo", wfo)]
+            + [("phenomena", p) for p in self.phenomena]
+            + [("lsrtype", p) for p in self.phenomena]
+            + [
+                ("begints", f"{year}-01-01T00:00Z"),
+                ("endts", f"{year + 1}-01-01T00:00Z"),
+            ]
+        )
 
         for attempt in range(1, self.retries + 1):
             try:
