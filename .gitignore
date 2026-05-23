@@ -1,9 +1,13 @@
-data/.DS_Store
-data/raw/.DS_Store
+# macOS metadata
 .DS_Store
 .gitattributes
-*.json
+
+# Data pipeline outputs — large files, local only
+# wfo_list.csv is tracked as the pipeline input
+data/01_collection/
+data/02_extraction/
+data/03_cleaning/
+
+# Python artifacts
 *.pyc
-*.csv
-*.csv
-/data
+__pycache__/

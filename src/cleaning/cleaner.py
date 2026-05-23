@@ -4,8 +4,8 @@
 # Applies all cleaning transformations to the extracted events and
 # stormreports tables. Each method is a discrete cleaning step so that
 # the notebook can invoke them individually for documentation purposes.
-# The full clean() convenience method runs all steps in order and writes
-# processed CSVs to data/03_cleaning/.
+# The clean_events() and clean_stormreports() convenience methods run all
+# steps in order and write processed CSVs to data/03_cleaning/.
 
 import json
 import logging
@@ -270,9 +270,9 @@ class COWCleaner:
     def drop_stormreport_columns(self, stormreports: pd.DataFrame) -> pd.DataFrame:
         """Drop columns with no analytical value from the stormreports table.
 
-        Drops type (duplicates lsrtype), magnitude (67% null, not in scope),
-        and link (URL blob). Retains lon0/lat0 for spatial EDA and events
-        as the FK trace link to matched warnings.
+        Drops type (duplicates lsrtype), magnitude (67% null, not used in
+        any planned analysis), and link (URL blob). Retains lon0/lat0 for
+        spatial EDA and events as the FK trace link to matched warnings.
 
         Args:
             stormreports: Raw extracted stormreports DataFrame.

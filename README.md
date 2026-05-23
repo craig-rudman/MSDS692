@@ -57,6 +57,5 @@ Three tables extracted from the raw JSON:
 
 1. **LSR underreporting:** LSRs are filed voluntarily; miss rates should be interpreted as "among reported events." A drop in unwarned reports in 2025 could reflect fewer LSRs filed, not better performance.
 2. **No WFO-level staffing covariate:** `fcster` was investigated as a staffing proxy but abandoned — rolling 3-month analysis showed chronic format mixing (badge numbers, last names, initials coexisting) in 118 of 122 WFOs, making unique-count comparisons unreliable. No public WFO-level staffing dataset exists. The analysis treats 2025 as a system-wide treatment without a per-office staffing dose variable.
-3. **Magnitude field:** Not comparable across phenomena (EF scale for TO, mph for SV, inches for FF). Must split by `lsrtype` before any magnitude analysis.
-4. **Small-sample WFOs:** WFOs with very few events in a year will produce unreliable per-WFO statistics. A minimum events threshold may be needed.
-5. **Non-CONUS offices:** Alaska, Hawaii, Guam, and Puerto Rico have fundamentally different weather patterns. Consider flagging or excluding from the main analysis.
+3. **Small-sample WFOs:** WFOs with very few events in a year will produce unreliable per-WFO statistics. A minimum events threshold may be needed.
+4. **Non-CONUS offices:** Alaska, Hawaii, Guam, and Puerto Rico have fundamentally different weather patterns. Consider flagging or excluding from the main analysis.
