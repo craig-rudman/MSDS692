@@ -87,6 +87,27 @@ Two tables in `data/03_cleaning/`, one row per warning event and one row per Loc
 
 ![Contingency table defining POD, FAR, and CSI](img/contingency_table.png)
 
+## Reproducibility
+
+The cleaned analysis files (`data/03_cleaning/events.csv` and `stormreports.csv`) are not tracked in this repository due to size. Two paths to reproduce them:
+
+**Option A — Use the published data deposit (recommended)**
+
+The cleaned tables are archived at:
+
+> *Zenodo DOI: [to be added upon paper submission]*
+
+Download the two CSVs and place them in `data/03_cleaning/`. Notebooks `04_eda.ipynb` onward can then be run directly.
+
+**Option B — Re-run the pipeline**
+
+Run the notebooks in order: `01_collection` → `02_extraction` → `03_cleaning`. Note:
+
+- Collection makes 732 API calls (122 WFOs × 6 years) and takes ~40 minutes (~3 sec/file).
+- IEM may backfill or correct LSRs after the fact; results may differ slightly from the published deposit if re-collected on a different date.
+- The published deposit reflects data collected **May 2026**; 2025 is a complete calendar year with no partial-year bias at that date.
+- Nominatim geocoding (used to impute null city/county values in `03_cleaning`) queries the OpenStreetMap API and results may vary over time as OSM data changes.
+
 ## Notebooks
 
 | Notebook | Purpose |
