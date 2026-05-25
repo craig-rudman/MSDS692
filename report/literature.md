@@ -2,6 +2,10 @@
 
 Organized by theme. All sources are peer-reviewed journal articles, government reports, or official federal datasets unless noted. Journalistic sources are excluded; see analysis notes for how news coverage of specific 2025 events informs the treatment timeline.
 
+## Research Process Note
+
+This literature review was conducted with the assistance of Claude (Anthropic), an AI assistant, as part of a collaborative research workflow. Specifically, Claude performed the initial web searches across the four thematic areas, retrieved and summarized candidate sources, and drafted the annotations. All sources were identified and selected by Claude based on relevance to the research question; the author reviewed the results and directed the scope and focus of the search. Individual citations should be independently verified before inclusion in any submitted manuscript — DOIs and URLs are provided for that purpose.
+
 ---
 
 ## 1. Warning Performance Baselines and Verification Methods

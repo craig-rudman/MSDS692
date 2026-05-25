@@ -128,3 +128,7 @@ Run the notebooks in order: `01_collection` → `02_extraction` → `03_cleaning
 5. **Treatment is not a clean step function:** The 2025 staffing reduction unfolded in phases — probationary terminations (February 27), deferred resignations departing (April), and a partial rehiring wave (August, after NWS received a public safety exemption). A simple pre/post split treats 2025 as uniformly treated; interrupted time series or sensitivity analyses with alternate cut points should be considered.
 6. **Small-sample WFOs:** WFOs with very few events in a year will produce unreliable per-WFO statistics. A minimum events threshold may be needed.
 7. **Non-CONUS offices:** Alaska, Hawaii, Guam, and Puerto Rico have fundamentally different weather patterns. Consider flagging or excluding from the main analysis.
+
+## AI Assistance
+
+This project was developed in collaboration with [Claude](https://claude.ai) (Anthropic), an AI assistant. Claude contributed to code architecture and implementation (`src/` classes, cleaning pipeline), data investigation (IEM API field overflow bug, data provenance research, `lead0` semantics), literature search and annotation (`report/literature.md`), and documentation. All analytical decisions, research direction, and final outputs were made by the author.
