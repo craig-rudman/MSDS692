@@ -34,6 +34,8 @@ EVENTS_DROP_COLS = [
     "visual_imgurl", "product_text", "product_href", "link",
     "stormreports", "stormreports_all",
     "fcster",
+    "statuses",  # identical to status after deduplication — pre-dedup API artifact
+    "hailtag",   # 100% null for FF (structurally inapplicable); not used in planned analysis
 ]
 
 # Storm reports columns with no analytical value.
@@ -267,6 +269,104 @@ class COWCleaner:
     # Storm Reports
     # ------------------------------------------------------------------
 
+    def repair_malformed_rows(self, stormreports: pd.DataFrame) -> pd.DataFrame:
+        """Repair rows corrupted by a fixed-width field overflow bug in the IEM API.
+
+        When a long remark is serialized, the API occasionally overflows into
+        adjacent fixed-width columns, corrupting lat0, lon0, state, county, and
+        source. Four distinct corruption patterns are present in the dataset:
+
+        1. lat0 truncation with a clean duplicate present — the leading digit(s)
+           of lat0 were consumed by the preceding field (e.g. 32.91 → 2.91).
+           A clean copy of the same report exists in the same file. The corrupt
+           row is dropped; the clean copy is retained.
+
+        2. lat0 truncation with no clean duplicate — same overflow as above but
+           the corrupt row is the only copy. The missing leading digit is inferred
+           from the WFO's latitude range and prepended to restore the value.
+
+        3. lon0 sign loss — the negative sign was consumed, producing a positive
+           longitude (e.g. -89.15 → 89.15). Detected as CONUS WFO with lon0 > 0;
+           repaired by negating lon0.
+
+        4. Junk state/county with valid coordinates — state and county contain
+           placeholder values (XX, XXX) but lat0/lon0 are correct. State is
+           inferred from the WFO's known state; county is imputed via Nominatim
+           in the subsequent impute_null_counties() step.
+
+        This method must run before any step that reads the affected columns.
+        GUM (Guam/Saipan) reports with positive lon0 are legitimate — they are
+        identified by wfo='GUM' and left untouched.
+
+        Args:
+            stormreports: Extracted stormreports DataFrame.
+
+        Returns:
+            DataFrame with malformed rows repaired or removed.
+        """
+        result = stormreports.copy()
+
+        # --- Case 1: lat0 truncation — drop corrupt rows that have a clean duplicate ---
+        # Corrupt rows have lat0 < 10 with a valid CONUS lon0. For each, check
+        # whether a clean copy exists (same wfo, valid, lsrtype, lon0, lat0 >= 10).
+        corrupt_mask = (
+            (result["lat0"] < 10) &
+            (result["lon0"] >= -180) & (result["lon0"] <= -60)
+        )
+        drop_idx = []
+        repair_idx = []
+        for idx in result[corrupt_mask].index:
+            row = result.loc[idx]
+            clean = result[
+                (result["wfo"] == row["wfo"]) &
+                (result["valid"] == row["valid"]) &
+                (result["lsrtype"] == row["lsrtype"]) &
+                (result["lon0"] == row["lon0"]) &
+                (result["lat0"] >= 10)
+            ]
+            if len(clean) >= 1:
+                drop_idx.append(idx)
+            else:
+                repair_idx.append(idx)
+
+        if drop_idx:
+            result = result.drop(index=drop_idx).reset_index(drop=True)
+            log.warning(f"Dropped {len(drop_idx)} corrupt rows with clean duplicates present")
+
+        # --- Case 2: lat0 truncation — repair rows with no clean duplicate ---
+        # The missing leading digit is inferred by finding the prefix p that
+        # places the repaired lat0 closest to the median lat0 of other clean
+        # rows from the same WFO (the most reliable within-dataset reference).
+        for idx in result[(result["lat0"] < 10) & (result["lon0"].between(-180, -60))].index:
+            corrupt_lat = result.at[idx, "lat0"]
+            wfo = result.at[idx, "wfo"]
+            wfo_median = result.loc[
+                (result["wfo"] == wfo) & (result["lat0"] >= 10), "lat0"
+            ].median()
+            best_prefix = min(range(1, 7), key=lambda p: abs(p * 10 + corrupt_lat - wfo_median))
+            repaired = best_prefix * 10 + corrupt_lat
+            result.at[idx, "lat0"] = repaired
+            log.warning(f"Repaired lat0: idx={idx} wfo={wfo} {corrupt_lat} → {repaired}")
+
+        # --- Case 3: lon0 sign loss — negate positive CONUS longitudes ---
+        # GUM (Guam/Saipan) legitimately has positive lon0; skip it.
+        sign_mask = (result["lon0"] > 0) & (result["wfo"] != "GUM")
+        if sign_mask.sum():
+            result.loc[sign_mask, "lon0"] = -result.loc[sign_mask, "lon0"]
+            log.warning(f"Repaired lon0 sign for {sign_mask.sum()} rows")
+
+        # --- Case 4: junk state/county with valid coordinates ---
+        # Replace placeholder state values with null so impute_null_counties()
+        # will resolve them via Nominatim. State is set to null here; a
+        # dedicated state-inference step is not warranted for 1 row.
+        junk_state_mask = result["state"].isin(["XX", "  ", "X "])
+        if junk_state_mask.sum():
+            result.loc[junk_state_mask, "state"] = None
+            result.loc[junk_state_mask, "county"] = None
+            log.warning(f"Nulled junk state/county for {junk_state_mask.sum()} rows")
+
+        return result
+
     def drop_stormreport_columns(self, stormreports: pd.DataFrame) -> pd.DataFrame:
         """Drop columns with no analytical value from the stormreports table.
 
@@ -433,6 +533,7 @@ class COWCleaner:
         Returns:
             Fully cleaned stormreports DataFrame.
         """
+        stormreports = self.repair_malformed_rows(stormreports)
         stormreports = self.drop_stormreport_columns(stormreports)
         stormreports = self.parse_stormreport_timestamps(stormreports)
         stormreports = self.normalize_source(stormreports)
