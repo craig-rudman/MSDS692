@@ -24,18 +24,19 @@ STATUS_PRIORITY = {"CAN": 0, "COR": 1, "EXP": 2, "EXT": 3, "CON": 4, "NEW": 5}
 
 # Events columns with no analytical value. See notebook cell documentation
 # for the rationale behind each group.
+#
+# Storm-mode covariates retained for regression (NOT dropped):
+#   svr_tornado_possible, tor_in_svrtorpossible — forecaster-flagged triage indicators
+#   hailtag, windtag — storm intensity proxies for SV warnings
+#   carea, parea, sharedborder — warning geometry / outbreak density proxies
 EVENTS_DROP_COLS = [
     "significance",
-    "windtag",
-    "svr_tornado_possible",
-    "tor_in_svrtorpossible",
-    "sharedborder", "carea", "perimeter", "parea", "areaverify", "lat0", "lon0",
+    "perimeter", "areaverify", "lat0", "lon0",
     "ar_ugc", "ar_ugcname",
     "visual_imgurl", "product_text", "product_href", "link",
     "stormreports", "stormreports_all",
     "fcster",
     "statuses",  # identical to status after deduplication — pre-dedup API artifact
-    "hailtag",   # 100% null for FF (structurally inapplicable); not used in planned analysis
 ]
 
 # Storm reports columns with no analytical value.
@@ -137,8 +138,10 @@ class COWCleaner:
     def drop_event_columns(self, events: pd.DataFrame) -> pd.DataFrame:
         """Drop columns with no analytical value from the events table.
 
-        See EVENTS_DROP_COLS for the full list and rationale documented in
-        the module-level constant.
+        Storm-mode covariates (svr_tornado_possible, tor_in_svrtorpossible,
+        hailtag, windtag, carea, parea, sharedborder) are intentionally
+        retained for use as regression covariates in 05_analysis.ipynb.
+        See EVENTS_DROP_COLS for the full drop list and rationale.
 
         Args:
             events: Raw extracted events DataFrame.
