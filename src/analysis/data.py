@@ -6,7 +6,6 @@
 
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 from .constants import NON_CONUS, PHENOMENA
@@ -30,7 +29,9 @@ def load_events(clean_dir: Path) -> pd.DataFrame:
     )
     df["issue"]      = pd.to_datetime(df["issue"],  utc=True)
     df["expire"]     = pd.to_datetime(df["expire"], utc=True)
-    df["year_month"] = df["issue"].dt.to_period("M")
+    # tz-naive before to_period: a monthly period carries no tz, and converting
+    # in place avoids pandas' UserWarning about dropping tz information
+    df["year_month"] = df["issue"].dt.tz_localize(None).dt.to_period("M")
     df["month"]      = df["issue"].dt.month
     return df
 
@@ -46,25 +47,10 @@ def load_stormreports(clean_dir: Path) -> pd.DataFrame:
     """
     df = pd.read_csv(clean_dir / "stormreports.csv", parse_dates=["valid"])
     df["valid"]      = pd.to_datetime(df["valid"], utc=True)
-    df["year_month"] = df["valid"].dt.to_period("M")
+    # tz-naive before to_period: a monthly period carries no tz, and converting
+    # in place avoids pandas' UserWarning about dropping tz information
+    df["year_month"] = df["valid"].dt.tz_localize(None).dt.to_period("M")
     return df
-
-
-def filter_conus(events: pd.DataFrame) -> pd.DataFrame:
-    """Return CONUS-only events with analysis helper columns added.
-
-    Drops non-CONUS WFOs and adds year2025 (0/1 indicator used in logistic
-    regression models).
-
-    Args:
-        events: Full events DataFrame from load_events().
-
-    Returns:
-        Filtered DataFrame restricted to CONUS WFOs.
-    """
-    conus = events[~events["wfo"].isin(NON_CONUS)].copy()
-    conus["year2025"] = (conus["year"] == 2025).astype(int)
-    return conus
 
 
 def get_p75_wfos(events: pd.DataFrame) -> dict[str, set]:

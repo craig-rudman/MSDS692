@@ -11,3 +11,4 @@ data/03_cleaning/
 # Python artifacts
 *.pyc
 __pycache__/
+/docs

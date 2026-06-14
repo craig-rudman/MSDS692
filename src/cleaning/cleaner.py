@@ -249,25 +249,6 @@ class COWCleaner:
         log.info(f"Derived product_id for {len(result):,} events")
         return result
 
-    def clean_events(self, events: pd.DataFrame) -> pd.DataFrame:
-        """Run all events cleaning steps in sequence.
-
-        Steps: drop columns → deduplicate → parse timestamps →
-               cap lead0 → derive product_id.
-
-        Args:
-            events: Raw extracted events DataFrame.
-
-        Returns:
-            Fully cleaned events DataFrame.
-        """
-        events = self.drop_event_columns(events)
-        events = self.deduplicate_events(events)
-        events = self.parse_event_timestamps(events)
-        events = self.cap_lead0(events)
-        events = self.derive_product_id(events)
-        return events
-
     # ------------------------------------------------------------------
     # Storm Reports
     # ------------------------------------------------------------------
@@ -523,27 +504,6 @@ class COWCleaner:
             time.sleep(1)
 
         return result
-
-    def clean_stormreports(self, stormreports: pd.DataFrame) -> pd.DataFrame:
-        """Run all storm report cleaning steps in sequence.
-
-        Steps: drop columns → parse timestamps → normalize source →
-               cap leadtime → impute null cities → impute null counties.
-
-        Args:
-            stormreports: Raw extracted stormreports DataFrame.
-
-        Returns:
-            Fully cleaned stormreports DataFrame.
-        """
-        stormreports = self.repair_malformed_rows(stormreports)
-        stormreports = self.drop_stormreport_columns(stormreports)
-        stormreports = self.parse_stormreport_timestamps(stormreports)
-        stormreports = self.normalize_source(stormreports)
-        stormreports = self.cap_leadtime(stormreports)
-        stormreports = self.impute_null_cities(stormreports)
-        stormreports = self.impute_null_counties(stormreports)
-        return stormreports
 
     # ------------------------------------------------------------------
     # Persistence

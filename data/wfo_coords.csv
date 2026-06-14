@@ -1,0 +1,123 @@
+wfo,lat,lon,name,state
+ABQ,35.03,-106.62,Albuquerque,NM
+ABR,45.45,-98.41,Aberdeen,SD
+AKQ,36.98,-77.0,Wakefield,VA
+ALY,42.69,-73.83,Albany,NY
+AMA,35.23,-101.7,Amarillo,TX
+APX,44.9,-84.71,Gaylord,MI
+ARX,43.82,-91.19,La Crosse,WI
+BGM,42.21,-75.98,Binghamton,NY
+BIS,46.77,-100.75,Bismarck,ND
+BMX,33.17,-86.78,Birmingham,AL
+BOI,43.56,-116.21,Boise,ID
+BOU,40.0,-105.26,Denver,CO
+BOX,41.95,-71.13,Boston / Norton,MA
+BRO,25.91,-97.41,Brownsville,TX
+BTV,44.46,-73.15,Burlington,VT
+BUF,42.94,-78.71,Buffalo,NY
+BYZ,45.75,-108.57,Billings,MT
+CAE,33.94,-81.12,Columbia,SC
+CAR,45.78,-68.62,Caribou,ME
+CHS,32.89,-80.02,Charleston,SC
+CLE,41.41,-81.86,Cleveland,OH
+CRP,27.77,-97.5,Corpus Christi,TX
+CTP,40.79,-77.86,State College,PA
+CYS,41.15,-104.8,Cheyenne,WY
+DDC,37.76,-99.96,Dodge City,KS
+DLH,46.83,-92.21,Duluth,MN
+DMX,41.73,-93.72,Des Moines,IA
+DTX,42.68,-83.47,Detroit,MI
+DVN,41.61,-90.58,Quad Cities IA IL,IL
+EAX,38.8,-94.26,Kansas City/Pleasant Hill,MO
+EKA,40.8,-124.16,Eureka,CA
+EPZ,31.8728,-106.6982,El Paso,TX
+EWX,29.7044,-98.0289,Austin/San Antonio,TX
+FFC,33.36,-84.56,Peachtree City,GA
+FGF,47.9219,-97.0981,Grand Forks,ND
+FGZ,35.23,-111.82,Flagstaff,AZ
+FSD,43.5874,-96.7297,Sioux Falls,SD
+FWD,32.8349,-97.2988,Dallas/Fort Worth,TX
+GGW,48.2,-106.62,Glasgow,MT
+GID,40.64,-98.38,Hastings,NE
+GJT,39.11,-108.52,Grand Junction,CO
+GLD,39.36,-101.7,Goodland,KS
+GRB,44.49,-88.11,Green Bay,WI
+GRR,42.89,-85.54,Grand Rapids,MI
+GSP,34.88,-82.22,Greenville/Spartanburg,SC
+GYX,43.89,-70.25,Gray,ME
+HGX,29.47,-95.07,Houston/Galveston,TX
+HNX,36.31,-119.63,San Joaquin Valley/Hanford,CA
+HUN,34.72,-86.65,Huntsville,AL
+ICT,37.65,-97.44,Wichita,KS
+ILM,34.27,-77.91,Wilmington,NC
+ILN,39.42,-83.82,Wilmington,OH
+ILX,40.15,-89.33,Lincoln,IL
+IND,39.7,-86.28,Indianapolis,IN
+IWX,41.35,-85.7,Northern Indiana,IN
+JAN,32.31,-90.08,Jackson,MS
+JAX,30.48,-81.7,Jacksonville,FL
+JKL,37.59,-83.31,Jackson,KY
+KEY,24.58,-81.7,Key West,FL
+LBF,41.13,-100.7,North Platte,NE
+LCH,30.12,-93.21,Lake Charles,LA
+LIX,30.33,-89.82,New Orleans,LA
+LKN,40.86,-115.74,Elko,NV
+LMK,38.11,-85.64,Louisville,KY
+LOT,41.6,-88.08,Chicago,IL
+LOX,34.2,-119.13,Los Angeles/Oxnard,CA
+LSX,38.69,-90.68,St Louis,MO
+LUB,33.52,-101.87,Lubbock,TX
+LWX,38.97,-77.47,Baltimore/Washington,VA
+LZK,34.83,-92.25,Little Rock,AR
+MAF,31.94,-102.18,Midland/Odessa,TX
+MEG,35.13,-89.8,Memphis,TN
+MFL,25.75,-80.38,Miami,FL
+MFR,42.37,-122.88,Medford,OR
+MHX,34.77,-76.87,Newport/Morehead City,NC
+MKX,42.96,-88.54,Milwaukee/Sullivan,WI
+MLB,28.11,-80.65,Melbourne,FL
+MOB,30.67,-88.23,Mobile,AL
+MPX,44.849,-93.5656,Twin Cities/Chanhassen,MN
+MQT,46.53,-87.54,Marquette,MI
+MRX,36.16,-83.4,Morristown,TN
+MSO,46.92,-114.09,Missoula,MT
+MTR,36.59,-121.85,San Francisco,CA
+OAX,41.3201,-96.3672,Omaha / Valley,NE
+OHX,36.24,-86.56,Nashville,TN
+OKX,40.86,-72.86,New York,NY
+OTX,47.68,-117.62,Spokane,WA
+OUN,35.23,-97.46,Norman,OK
+PAFC,61.15,-149.98,Anchorage,AK
+PAFG,64.85,-147.83,Fairbanks,AK
+PAH,37.06,-88.77,Paducah,KY
+PAJK,58.37,-134.59,Juneau,AK
+PBZ,40.53,-80.21,Pittsburgh,PA
+PDT,45.69,-118.85,Pendleton,OR
+PGUM,13.48,144.8,Guam,MY
+PHFO,21.2992,-157.8199,Honolulu,HI
+PHI,40.0136,-74.8174,Mount Holly,NJ
+PIH,42.9,-112.58,Pocatello/Idaho Falls,ID
+PQR,45.56,-122.53,Portland,OR
+PSR,33.43,-112.02,Phoenix,AZ
+PUB,38.27,-104.52,Pueblo,CO
+RAH,35.77,-78.68,Raleigh,NC
+REV,39.56,-119.79,Reno,NV
+RIW,43.06,-108.47,Riverton,WY
+RLX,38.31,-81.71,Charleston,WV
+RNK,37.2,-80.41,Blacksburg,VA
+SEW,47.68,-122.25,Seattle,WA
+SGF,37.23,-93.4,Springfield,MO
+SGX,32.91,-117.06,San Diego,CA
+SHV,32.45,-93.84,Shreveport,LA
+SJT,31.37,-100.49,San Angelo,TX
+SLC,40.77,-111.95,Salt Lake City,UT
+STO,38.6,-121.38,Sacramento,CA
+TAE,30.45,-84.3,Tallahassee,FL
+TBW,27.7054,-82.4007,Tampa Bay Area / Ruskin,FL
+TFX,47.46,-111.38,Great Falls,MT
+TJSJ,18.43,-66.0,San Juan,PR
+TOP,39.07,-95.63,Topeka,KS
+TSA,36.14,-95.86,Tulsa,OK
+TWC,32.22,-110.95,Tucson,AZ
+UNR,44.07,-103.21,Rapid City,SD
+VEF,36.04,-115.18,Las Vegas,NV
