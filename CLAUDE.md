@@ -4,11 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MSDS692 capstone: statistical analysis of whether 2025 NWS staffing cuts changed warning performance, framed as an exercise in independent oversight from the public record (a coincident change raises the question against the public record; it does not establish cause). Data comes from the IEM COW API (mesonet.agron.iastate.edu). The analysis pipeline runs through six sequentially numbered notebooks; `06_synthesis.ipynb` is the full draft report.
+MSDS692 capstone: statistical analysis of whether 2025 NWS staffing cuts changed warning performance, framed as an exercise in independent oversight from the public record (a coincident change raises the question against the public record; it does not establish cause). Data comes from the IEM COW API (mesonet.agron.iastate.edu). The pipeline runs through six sequentially numbered notebooks.
+
+**Rebaseline in progress.** The project has been reset to a clean exploratory state. The collection, extraction, and cleaning stages (`01`–`03`) are stable. All prior analysis has been demoted to exploratory and now lives in `04_eda.ipynb`; `05_analysis.ipynb` and `06_synthesis.ipynb` are empty stubs awaiting a rebuild around a decided analytical story. The slide deck has likewise been cleared. Do not treat any result currently in `04_eda.ipynb` as a finished test; it is descriptive and provisional until the analysis is rebuilt.
 
 ## Environment
 
-Notebooks run in VS Code with the `msds692` kernel. Do not use `nbconvert` or suggest JupyterLab. The minimum-viable conda environment is defined in `environment.yml` (build with `conda env create -f environment.yml`); there is no `requirements.txt` or `Makefile`. Direct dependencies are pandas, numpy, scipy, statsmodels, matplotlib, and requests, plus `h3` (v4 API), `geopandas`, and `shapely` for the spatial test in `05_analysis.ipynb`. Versions are pinned in `environment.yml` to the set the notebooks were last validated against. The geographic maps in `04_eda.ipynb` and `05_analysis.ipynb` fetch US Census TIGER state and county boundaries (GENZ2023) over the network at run time. Plot styling uses matplotlib's built-in `seaborn-v0_8-whitegrid` style; seaborn itself is not a dependency.
+Notebooks run in VS Code with the `msds692` kernel. Do not use `nbconvert` or suggest JupyterLab. The minimum-viable conda environment is defined in `environment.yml` (build with `conda env create -f environment.yml`); there is no `requirements.txt` or `Makefile`. Direct dependencies are pandas, numpy, scipy, statsmodels, matplotlib, and requests, plus `h3` (v4 API), `geopandas`, and `shapely` for the spatial exploration in `04_eda.ipynb`. Versions are pinned in `environment.yml` to the set the notebooks were last validated against. The geographic maps in `04_eda.ipynb` fetch US Census TIGER state and county boundaries (GENZ2023) over the network at run time. Plot styling uses matplotlib's built-in `seaborn-v0_8-whitegrid` style; seaborn itself is not a dependency.
 
 ## Running the Pipeline
 
@@ -18,12 +20,12 @@ Run notebooks in order. Each stage produces immutable output consumed by the nex
 01_collection.ipynb   →  data/01_collection/COW/{WFO}_{YEAR}.json
 02_extraction.ipynb   →  data/02_extraction/
 03_cleaning.ipynb     →  data/03_cleaning/events.csv, stormreports.csv
-04_eda.ipynb          →  exploratory analysis
-05_analysis.ipynb     →  three statistical tests (system-wide shift, office-level placebo, spatial clustering)
-06_synthesis.ipynb    →  full draft report (Sections I–X, with embedded figures)
+04_eda.ipynb          →  exploratory analysis (includes the demoted prior tests)
+05_analysis.ipynb     →  empty stub; to be rebuilt around a decided story
+06_synthesis.ipynb    →  empty stub; to be rebuilt as the full draft report
 ```
 
-Collection makes 732 API calls (~40 min). Cleaned CSVs are not git-tracked (size); for analysis-only work, start from `04_eda.ipynb` using the Zenodo deposit (DOI pending).
+Collection makes 1,220 API calls (122 WFOs × 10 years, 2016–2025; ~40 min). Cleaned CSVs are not git-tracked (size); for analysis-only work, start from `04_eda.ipynb` using the Zenodo deposit (DOI pending).
 
 ## Code Standards
 
@@ -37,23 +39,23 @@ All `.py` files require:
 `src/` is organized by pipeline stage:
 
 - `collection/` — `COWClient` (HTTP, single WFO-year fetch), `WFORegistry` (loads `data/wfo_list.csv`), `COWCollector` (orchestrates full run)
-- `extraction/` — `COWExtractor` (JSON → two flat CSVs: events and stormreports); `extract_ugc.py` (county UGC extraction supporting county-level work)
-- `cleaning/` — `COWCleaner` (597 LOC): type casting, null imputation via Nominatim geocoding, deduplication using terminal-status priority, IEM API bug repair
-- `analysis/` — shared utilities consumed by notebooks: `constants.py` (project-wide constants), `stats.py` (statistical helpers), `data.py` (loading and filtering)
+- `extraction/` — `COWExtractor` (JSON → two flat CSVs: events and stormreports)
+- `cleaning/` — `COWCleaner`: type casting, null imputation via Nominatim geocoding, deduplication using terminal-status priority, IEM API bug repair. Notebook 03 calls the step methods directly (drop → dedup → parse → cap → derive, then the storm-report sequence); there are no `clean_events`/`clean_stormreports` orchestrator wrappers.
+- `analysis/` — shared utilities consumed by notebooks: `constants.py` (project-wide constants), `stats.py` (`sig_stars`), `data.py` (loading, plus per-WFO baseline and top-quartile helpers). Dead code from earlier iterations (`filter_conus`, `phase_label`) has been pruned. Note: `get_p75_wfos` and the top-quartile machinery remain but describe a filter the current design does not apply (see Analysis Design); revisit during the rebuild.
 
 ## Repository Layout
 
 - `notebooks/` — the six-stage pipeline (`01_collection` through `06_synthesis`).
 - `src/` — the source package, organized by pipeline stage (see above).
 - `data/` — pipeline outputs by stage (`01_collection/`, `02_extraction/`, `03_cleaning/`) plus small derived/support CSVs (`wfo_list.csv`, `wfo_coords.csv`, `wfo_delta_stats.csv`, `monthly_variance_stats.csv`). Stage CSVs under `03_cleaning/` are not git-tracked (size).
-- `img/` — the 13 figures referenced by the report; all are regenerated by `04_eda.ipynb` and `05_analysis.ipynb`. Keep this directory in sync with the notebooks' `savefig` targets (stale figures from earlier iterations have been removed).
+- `img/` — figures regenerated by the notebooks (currently `04_eda.ipynb`). The directory has been cleared as part of the rebaseline and will repopulate when the notebooks are re-run. All `savefig` targets are prefixed `eda_`; keep this directory in sync with the notebooks' targets. Figure re-sequencing is a pending task once 04 is the single EDA notebook.
 - `docs/` — source corpus: PDFs and matching `.txt` extractions for every cited work (peer-reviewed papers, government reports, executive orders, journalism), plus `literature.md`, the annotated bibliography and the home for full reference details. New downloaded sources follow the `YYYY-MM-DD-outlet-slug.pdf` convention with a paired `.txt`.
-- `report/` — final-deliverable materials assembled outside the notebooks. The presentation deck lives in `report/slides/`: `slide_outline.md` (the source of truth), `build_slides.py` (regenerates the deck: `python3 report/slides/build_slides.py`), `slides.html` (the self-contained reveal.js deck, opened from disk), `speaker_notes.md`, and the bundled `reveal/`. The report itself is also being authored in Overleaf; `06_synthesis.ipynb` is the in-repo draft.
+- `report/` — final-deliverable materials assembled outside the notebooks. The presentation deck lives in `report/slides/`: `slide_outline.md` (the source of truth), `build_slides.py` (regenerates the deck: `python3 report/slides/build_slides.py`), `speaker_notes.md`, and the bundled `reveal/`. As part of the rebaseline, `slide_outline.md` and `speaker_notes.md` are stubbed and the generated `slides.html` has been deleted; the deck will be rebuilt once the analytical story is decided. The report itself is also being authored in Overleaf; `06_synthesis.ipynb` is the in-repo draft (currently a stub).
 - `README.md` — top-level project summary. Note: at last check its data-range description (2020–2025) predates the move to a 2016–2024 baseline and should be reconciled.
 
 ## Report and Citations
 
-`06_synthesis.ipynb` is the full draft report, structured to the practicum template: Abstract, then Sections I–X (Introduction, Problem Statement, Related Work, Methodology, Data Analysis, Outcomes and Contributions, Discussion, Timeline, Conclusion, References). It includes a Use-of-AI disclosure in the Methodology section and a Kerr County case study in the Discussion. Figures are embedded as markdown image refs (`../img/...`) with numbered captions.
+`06_synthesis.ipynb` will be the full draft report, structured to the practicum template: Abstract, then Sections I–X (Introduction, Problem Statement, Related Work, Methodology, Data Analysis, Outcomes and Contributions, Discussion, Timeline, Conclusion, References). The prior draft included a Use-of-AI disclosure in the Methodology section and a Kerr County case study in the Discussion; carry these forward in the rebuild. Figures are embedded as markdown image refs (`../img/...`) with numbered captions. The notebook is currently a stub.
 
 Citations are author-date inline; full entries live in both the notebook's References section and `docs/literature.md`. Same-author/same-year collisions use letter suffixes (e.g., Dance 2025a/b, NPR 2025a/b/c). Some sources are cited by outlet (NBC News, Washington Post) and others by author; this is internally consistent within the notebook but should be unified during final assembly.
 
@@ -79,13 +81,15 @@ Citations are author-date inline; full entries live in both the notebook's Refer
 
 ## Analysis Design
 
-Pre/post split: 2016–2024 baseline vs. 2025 treatment. Primary metrics: POD (POD₂), FAR, LTA. The analysis is system-wide (no top-quartile WFO filter). Every test is calibrated against a null built from the baseline years themselves rather than a single significance threshold. `05_analysis.ipynb` runs three tests:
+**Status: pre-rebuild reference.** The three-test design below is the prior analysis, now demoted to exploratory in `04_eda.ipynb`. It is documented here because the rebuilt `05_analysis.ipynb` will likely draw on these methods, not as a current live spec. Do not assume `05` runs these tests; it is an empty stub.
+
+Pre/post split: 2016–2024 baseline vs. 2025 treatment. Primary metrics: POD (POD₂), FAR, LTA. The analysis is system-wide (no top-quartile WFO filter). Every test is calibrated against a null built from the baseline years themselves rather than a single significance threshold. The prior design ran three tests:
 
 - **Test 1 — Feb–June distributional shift:** whether the mean and variance of POD and LTA, and the mean of FAR, shifted in the February through June window (which straddles the Feb 27 and Apr 1 staffing milestones), with two controls on alternative explanations: LSR filing volume, and changes in warning issuance characteristics (polygon area `carea`, hail/wind thresholds). POD/LTA use mean and variance tests (two-proportion z / Mann-Whitney U, plus Levene); FAR is mean-only (verify rate near 0.5 makes its variance uninformative).
 - **Test 2 — office-level change vs. natural variation:** a placebo test treating each baseline year in turn as a stand-in treatment year to build a null distribution of degraded-office counts, plus Benjamini-Hochberg FDR correction on per-office 2025-vs-baseline p-values. Covers POD, FAR, and LTA.
 - **Test 3 — spatial concentration:** storm reports (which carry coordinates, unlike warnings) are binned into an H3 hexagonal grid (resolution 3); per-cell warned-fraction deltas are tested for spatial clustering with a hand-implemented Moran's I, calibrated against a baseline-year placebo. POD-only (warnings lack coordinates, so FAR cannot be mapped); severe thunderstorm and pooled are assessable, while tornado and flash flood are too sparse at sub-office resolution.
 
-The convergent finding across all three tests is that severe thunderstorm is the one phenomenon where 2025 stands out beyond natural variation.
+The provisional finding across all three tests was that severe thunderstorm is the one phenomenon where 2025 stands out beyond natural variation. Treat this as the exploratory result that motivates the rebuild, not as a confirmed conclusion.
 
 Framing throughout: a change concurrent with the staffing timeline raises the question against the public record; it does not establish cause. Plot titles/annotations stay descriptive; interpretation lives in markdown and report prose.
 
