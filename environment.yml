@@ -1,16 +1,18 @@
 # Minimum-viable conda environment for the MSDS692 NWS warning-performance project.
 #
-# Scope: only the packages actually imported by src/ and the six notebooks.
+# Scope: only the packages actually imported by src/ and the five notebooks.
 # Standard-library modules (json, csv, logging, time, urllib, pathlib, sys,
 # warnings) need no install. Nominatim geocoding in the cleaning stage uses
 # urllib, so no geocoding package is required. seaborn was removed; notebook
 # styling uses matplotlib's built-in "seaborn-v0_8-whitegrid" style.
 #
 # Versions are pinned to the exact set the project was last run and validated
-# against (all six notebooks executed clean). conda-forge carries every pin,
-# including pandas 3.0, so the file solves without a pip section. pyproj and
-# pyogrio are geopandas's geospatial backends (GDAL/GEOS/PROJ); conda installs
-# their compiled libraries, which is far more reliable than pip wheels.
+# against (all five notebooks executed clean). conda-forge carries every pin,
+# including pandas 3.0, so the file solves without a pip section. geopandas is
+# used only to draw state-boundary outlines under the EDA storm-report scatter;
+# pyogrio is its default read engine for that one shapefile load, so conda
+# installs the compiled GDAL/GEOS stack, which is far more reliable than pip
+# wheels.
 #
 # Rebuild from scratch (do NOT prune the existing 500-package env; build fresh):
 #   conda env create -f environment.yml
@@ -32,11 +34,8 @@ dependencies:
   - matplotlib=3.10.9
   # HTTP for the IEM COW collection stage
   - requests=2.33.1
-  # Spatial analysis (Test 3) and maps
+  # Maps (EDA state-boundary outlines)
   - geopandas=1.1.3
-  - shapely=2.1.2
-  - h3-py=4.4.1
-  - pyproj=3.7.2
   - pyogrio=0.12.1
   # Notebook execution / kernel
   - ipykernel=6.28.0
