@@ -10,6 +10,9 @@ data/03_cleaning/
 # Geocode cache: local-only derived artifact. Safe to commit if you want
 # reruns to skip the Nominatim calls, but ignored here for consistency.
 data/cache/
+# Geo caches: all regenerable. The two Census zips re-download on demand;
+# wfo_coords.csv rebuilds via the NWS + Census geocoder APIs. Local-only.
+data/geo/
 
 # Python artifacts
 *.pyc
