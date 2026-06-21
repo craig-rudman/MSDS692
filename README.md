@@ -1,6 +1,8 @@
-# Examining the Public Record: NWS Warning Performance Under the 2025 Staffing Cuts
+# Examining the Public Record: NWS Warning Performance Under 2025 Staffing Cuts
 
-An MSDS692 data science practicum investigating whether the 2025 National Weather Service (NWS) staffing reductions changed the quality of public weather warnings.  The analysis uses the agency's own verification metrics, computed from a decade of public warning records, and tests whether 2025 departs from a 2016–2024 baseline. Any changes coincident with the staffing timeline raises the question against the public record, but it does not establish cause.
+In early 2025 the Trump administration moved to shrink the federal workforce, directing agency heads to fire probationary employees across the government and offering federal buyouts. Beginning February 27, 2025, those reductions cut staff across the National Weather Service (NWS), and through a spring of probationary terminations and buyouts the agency's headcount fell below 4,000 for the first time in its modern history, roughly 20 percent smaller than at the start of the year. By March 2025 about 19 percent of forecaster positions were vacant, with 55 of 122 forecast offices at or above a 20 percent vacancy rate [3], [4].
+
+A data science practicum investigating whether those staffing reductions changed the quality of public weather warnings. The analysis uses the agency's own quality metrics, computed from a decade of public warning records, and tests whether 2025 (year 10) departs from the season-adjusted trend fit over the 2016–2024 baseline. The departure is the quantity of interest. Any change coincident with the staffing timeline raises the question against the public record, but it does not establish cause.
 
 ## Research Question
 
@@ -8,42 +10,49 @@ Did NWS staffing cuts in 2025 result in statistically significant changes in war
 
 ## Data Source
 
-**COW API** (`mesonet.agron.iastate.edu/api/1/cow.json`)
+**COW API** ([mesonet.agron.iastate.edu/cow/](https://mesonet.agron.iastate.edu/cow/))
 
-- 122 WFOs x 10 complete calendar years (2016-2025)
-- Filtered to phenomena: **TO** (Tornado), **SV** (Severe Thunderstorm), **FF** (Flash Flood)
-- Collected in a single run on June 7, 2026: all 1,220 WFO-year files spanning 2016–2025. 2025 is a complete calendar year collected well after year-end, with no partial-year bias.
-- Year boundary verified: no duplicate or misassigned events across year files
+The Iowa Environmental Mesonet (IEM) COW (Storm-Based Warning Verification) tool, run by Iowa State University, lets you view the warnings and Local Storm Reports a Weather Forecast Office (WFO) issued over a period of your choice and automatically computes verification metrics (POD, FAR, lead time) by matching buffered storm reports against warning polygons [1]. Results are available over a public API.
 
 ### Data Provenance
 
-The COW API is a read-through of official NWS operational data; IEM introduces no modeled or derived fields beyond the verification join. The full ingestion chain is:
+The COW API ingests NWS warning and Local Storm Report products and adds a geospatial verification layer over them: buffered point-in-polygon matching, polygon area and lead-time computations, and summary skill scores (POD, FAR, CSI) [1]. That verification methodology is documented in the peer-reviewed literature [8], [9]. The full ingestion chain is:
 
-1. **NOAAPort / NOAA Satellite Broadcast Network (SBN)** NWS issues warning and LSR text products operationally; they are broadcast in real time over the NOAA satellite network.
-2. **Unidata LDM** Iowa State subscribes to the NOAAPort feed via Unidata's Logical Data Manager, receiving the full NWS product stream.
-3. **pyWWA parsers** — IEM's open-source [pyWWA](https://github.com/akrherz/pyWWA) project runs daemon parsers that decode incoming products and write them to the IEM database
-4. **COW verification join** The verification software matches each storm report to a warning when the report falls inside the warning's polygon and occurs while that warning is active (at or after issuance, before expiration).
+1. **NOAAPort / NOAA Satellite Broadcast Network (SBN)** NWS issues warning and Local Storm Report (LSR) text products operationally; they are broadcast in real time over the NOAA satellite network, which IEM identifies as its primary feed [10].
+2. **Unidata LDM** Iowa State receives the product stream via Unidata's Logical Data Manager; the pyWWA parsers are intended to run from LDM's `pqact` process [2].
+3. **pyWWA parsers**: IEM's open-source [pyWWA](https://github.com/akrherz/pyWWA) project runs daemon parsers that decode incoming products and write them to the IEM database [2]
+4. **COW verification join** The verification software matches each LSR to a warning when the buffered report falls inside the warning's polygon and occurs while that warning is active (at or after issuance, at or before expiration) [11].
 
-Because the source is the live NWS operational product stream (not NCEI archives or reanalysis), event and LSR records match what forecasters actually issued and received in real time.
+Because the records originate from the operational NWS product stream rather than a post-hoc archive, the event and LSR records reflect what forecasters issued and received in real time.
+
+### Dataset Scope
+
+- The NWS operates 122 Weather Forecast Offices (WFOs) nationally [12]. The COW fetch covered all 122; 121 returned data (San Juan, PR returned an empty payload for every year), and 116 remain after clipping to the continental United States (CONUS)
+- Two record types per WFO-year: issued **warnings** (one row per warning) and **Local Storm Reports** (one row per observed event); the verification join links them
+- 10 study years (2016–2025), one WFO-year file per calendar year plus a 2026 file that backfills late-filed 2025-Winter reports
+- Filtered to phenomena: **TO** (Tornado), **SV** (Severe Thunderstorm), **FF** (Flash Flood)
+- Collected in a single run on June 16, 2026. 2025 is a complete calendar year collected well after year-end, with no partial-year bias.
+- Year boundary verified: no duplicate or misassigned events across year files
 
 ## Repository Structure
 
 ```
 .
-├── notebooks/     Six-stage pipeline, 01_collection → 06_synthesis (run in order)
+├── notebooks/     Five-stage pipeline, 01_collection → 05_analysis (run in order)
 ├── src/           Source package, organized by pipeline stage
 │   ├── collection/   COWClient, WFORegistry, COWCollector (API fetch)
 │   ├── extraction/   COWExtractor (JSON → CSVs)
 │   ├── cleaning/     COWCleaner (type casting, imputation, dedup, bug repair)
-│   └── analysis/     Shared notebook helpers: constants, stats, data loaders
-├── data/          Pipeline outputs by stage + small support CSVs
-│                  (cleaned tables under 03_cleaning/ are not git-tracked; see Reproducibility)
-├── img/           Figures regenerated by the notebooks (currently 04); cleared
-│                  during the rebaseline, repopulates on re-run
+│   └── analysis/     Shared notebook helpers: constants, stats, data loaders, plots
+├── data/          Pipeline outputs by stage + support files (WFO lists, geo
+│                  boundaries, geocode cache); cleaned tables under 03_cleaning/
+│                  are not git-tracked (see Reproducibility)
+├── img/           Figures regenerated by the notebooks (04_eda and 05_analysis);
+│                  repopulates on re-run
 ├── docs/          Source corpus: a PDF + text extraction for every cited work,
 │                  plus literature.md (the annotated bibliography)
-├── report/        Final-deliverable materials; slides/ holds the presentation deck
-│                  (slide_outline.md, build_slides.py, reveal/); deck cleared for rebuild
+├── report/        Final-deliverable materials; holds the presentation deck (.pptx).
+│                  The written report is authored externally, not as a notebook.
 ├── README.md      This file
 └── CLAUDE.md      Guidance for AI-assisted work on the repository
 ```
@@ -54,7 +63,12 @@ Each pipeline stage writes an immutable checkpoint consumed by the next, so the 
 
 ```
 data/
-├── wfo_list.csv
+├── wfo/
+│   ├── wfo_list.csv            # WFO call signs and metadata
+│   └── wfo_coords.csv          # WFO point coordinates
+├── geo/                        # Census boundary archives (state, ZCTA) for maps
+├── cache/
+│   └── geocode_cache.json      # Nominatim geocode cache (city/county imputation)
 ├── 01_collection/
 │   └── COW/
 │       └── {WFO}_{YEAR}.json   # one file per WFO-year, immutable
@@ -66,82 +80,128 @@ data/
 
 Two tables in `data/03_cleaning/`, one row per warning event and one row per Local Storm Report.
 
-### events (261,557 rows)
+### events (260,537 rows)
 
-| Field | Type | Description |
-|---|---|---|
-| `wfo` | str | NWS Weather Forecast Office call sign (e.g. `OUN`) |
-| `year` | int | Calendar year (2016–2025); derived from filename, not API |
-| `phenomena` | str | VTEC phenomena code: `TO`, `SV`, or `FF` |
-| `eventid` | int | API-assigned event identifier; unique within WFO-year-phenomena |
-| `product_id` | str | Derived join key: `{year}{wfo}{eventid}{phenomena}W1` (e.g. `2020OUN41TOW1`) |
-| `issue` | datetime (UTC) | Warning issuance time |
-| `expire` | datetime (UTC) | Warning expiration time |
-| `duration_min` | float | Warning duration in minutes (`expire − issue`); derived |
-| `status` | str | Terminal issuance status: `EXP`, `CAN`, `COR`, `EXT`, `CON`, or `NEW` |
-| `verify` | bool | `True` if at least one confirming LSR was matched to this warning |
-| `lead0` | float | Lead time in minutes to the first confirming LSR; null for unverified events (53.0%) |
-| `lead0_capped` | bool | `True` if `lead0` was capped at the 99th percentile for its phenomena |
-| `svr_tornado_possible` | bool | SV warnings only: forecaster flagged a concurrent tornado threat; null for TO/FF |
-| `tor_in_svrtorpossible` | bool | SV warnings only: a tornado warning was active within the SVR tornado-possible area; null for TO/FF |
-| `hailtag` | str | SV warnings only: hail size threshold in inches (e.g. `"1.00"`); null for TO/FF and tagless SVs |
-| `windtag` | str | SV warnings only: wind speed threshold in knots (e.g. `"60"`); null for TO/FF and tagless SVs |
-| `carea` | float | Warning polygon area (km²); proxy for warning specificity |
-| `parea` | float | Warning polygon area from a secondary geometry field; see API docs |
-| `sharedborder` | float | Length of shared border with adjacent active warnings (km); proxy for outbreak density |
+The **Used** column marks fields the analysis (`04_eda` / `05_analysis`) consumes, whether as a model term, a diagnostic, a join/subset key, or a figure input. Unmarked fields survive cleaning but are not consumed by any analysis (carried for context or possible future use; the storm-mode covariates in particular are retained but are not inputs to the nine main fits, see [Methodological Notes](#methodological-notes), note 3).
 
-### stormreports (378,268 rows)
+| Used | Field | Type | Description |
+|---|---|---|---|
+| ✓ | `wfo` | str | NWS Weather Forecast Office call sign (e.g. `OUN`) |
+| ✓ | `year` | int | Calendar year (2016–2025); derived from filename, not API |
+| ✓ | `phenomena` | str | Valid Time Event Code (VTEC) phenomena code: `TO`, `SV`, or `FF` |
+|  | `eventid` | int | API-assigned event identifier; unique within WFO-year-phenomena |
+|  | `product_id` | str | Join key: `{year}{wfo}{eventid}{phenomena}W1` (e.g. `2020OUN41TOW1`) |
+| ✓ | `issue` | datetime (UTC) | Warning issuance time |
+| ✓ | `expire` | datetime (UTC) | Warning expiration time |
+|  | `duration_min` | float | Warning duration in minutes (`expire − issue`); derived |
+| ✓ | `status` | str | Terminal issuance status: `EXP`, `CAN`, `COR`, `EXT`, `CON`, or `NEW` |
+| ✓ | `verify` | bool | `True` if at least one confirming LSR was matched to this warning |
+| ✓ | `lead0` | float | Lead time in minutes to the first confirming LSR; null for unverified events (53.0%) |
+|  | `lead0_capped` | bool | `True` if `lead0` was capped at the 99th percentile for its phenomena |
+|  | `svr_tornado_possible` | bool | SV warnings only: forecaster flagged a concurrent tornado threat; null for TO/FF |
+|  | `tor_in_svrtorpossible` | bool | SV warnings only: a tornado warning was active within the SVR tornado-possible area; null for TO/FF |
+|  | `hailtag` | str | SV warnings only: hail size threshold in inches (e.g. `"1.00"`); null for TO/FF and tagless SVs |
+|  | `windtag` | str | SV warnings only: wind speed threshold in knots (e.g. `"60"`); null for TO/FF and tagless SVs |
+| ✓ | `carea` | float | Warning polygon area (km²); proxy for warning specificity (appendix diagnostic only) |
+|  | `parea` | float | Warning polygon area from a secondary geometry field; see API docs |
+|  | `sharedborder` | float | Length of shared border with adjacent active warnings (km); proxy for outbreak density |
 
-| Field | Type | Description |
-|---|---|---|
-| `wfo` | str | NWS Weather Forecast Office call sign |
-| `year` | int | Calendar year (2016–2025); derived from filename, not API |
-| `valid` | datetime (UTC) | Time the storm report was filed |
-| `lsrtype` | str | LSR phenomena type: `TO`, `SV`, or `FF` |
-| `typetext` | str | Human-readable description of the report type |
-| `warned` | bool | `True` if a matching warning was in effect at report time |
-| `leadtime` | float | Minutes between warning issuance and report time; null for unwarned reports (23.7%) |
-| `leadtime_capped` | bool | `True` if `leadtime` was capped at the 99th percentile for its lsrtype |
-| `events` | str | Comma-separated VTEC product IDs linking this report to matched warnings; null for unwarned reports (20.3%) |
-| `tdq` | bool | `True` if NWS marked this report "Too Difficult to Qualify" — not a confirmed hazardous event |
-| `source` | str | Normalized report source (e.g. `TRAINED SPOTTER`, `EMERGENCY MNGR`, `PUBLIC`) |
-| `city` | str | City of the report location; imputed via Nominatim where null |
-| `county` | str | County of the report location; imputed via Nominatim where null |
-| `state` | str | Two-letter state code |
-| `lon0` | float | Longitude of the report location (exact point geometry) |
-| `lat0` | float | Latitude of the report location (exact point geometry) |
-| `remark` | str | Free-text narrative from the reporting observer; null for 12.7% of rows |
+### stormreports (376,963 rows)
+
+| Used | Field | Type | Description |
+|---|---|---|---|
+| ✓ | `wfo` | str | NWS Weather Forecast Office call sign |
+| ✓ | `year` | int | Calendar year (2016–2025); derived from filename, not API |
+| ✓ | `valid` | datetime (UTC) | Time the storm report was filed |
+| ✓ | `lsrtype` | str | LSR phenomena type: `TO`, `SV`, or `FF` |
+|  | `typetext` | str | Human-readable description of the report type |
+| ✓ | `warned` | bool | `True` if a matching warning was in effect at report time |
+| ✓ | `leadtime` | float | Minutes between warning issuance and report time; null for unwarned reports (23.6%) |
+|  | `leadtime_capped` | bool | `True` if `leadtime` was capped at the 99th percentile for its lsrtype |
+| ✓ | `events` | str | Comma-separated VTEC product IDs linking this report to matched warnings; null for unwarned reports (20.2%) |
+|  | `tdq` | bool | `True` if NWS marked this report "Too Difficult to Qualify": not a confirmed hazardous event |
+| ✓ | `source` | str | Normalized report source (e.g. `TRAINED SPOTTER`, `EMERGENCY MNGR`, `PUBLIC`) |
+| ✓ | `city` | str | City of the report location; imputed via Nominatim where null |
+|  | `county` | str | County of the report location; imputed via Nominatim where null |
+| ✓ | `state` | str | Two-letter state code |
+| ✓ | `lon0` | float | Longitude of the report location (exact point geometry) |
+| ✓ | `lat0` | float | Latitude of the report location (exact point geometry) |
+|  | `remark` | str | Free-text narrative from the reporting observer; null for 12.8% of rows |
+
+### Engineered Features
+
+The cleaning stage (`03_cleaning`, `COWCleaner.derive_season`) derives five season columns from each row's timestamp (`issue` for events, `valid` for storm reports). They appear in **both** cleaned tables and carry the entire temporal design of the analysis. The model-ready trio (`season_cat`, `study_year`, `is_year10`) is the right-hand side of every fit; see [Analysis Design](#analysis-design).
+
+| Used | Field | Type | Description |
+|---|---|---|---|
+|  | `season` | str | `YYYY-Season` period label (e.g. `2025-Winter`); the source from which the other four are split. Seasons are three-month windows breaking on the 27th of February, May, August, and November, anchored to the February 27 staffing-treatment date so every Spring boundary is treatment-relative. **Not** a model term (it encodes the year and would collide with `study_year`). |
+|  | `season_year` | int | Year anchor of the season window (the window's first-day year). A January row labels to the **prior** year's Winter, so `2026-01-15` carries `season_year` 2025. Intermediate column used to derive `study_year`; not a model term. |
+| ✓ | `season_cat` | str | Season-of-year category: `Spring`, `Summer`, `Fall`, or `Winter`. The 4-level categorical term `C(season_cat)` in every model. |
+| ✓ | `study_year` | int | 1-based treatment-relative index, `season_year − 2015`, mapping 2016→1 … 2025→10. The numeric trend term; absorbs baseline drift across years 1–9. Not a calendar year. |
+| ✓ | `is_year10` | int (0/1) | Treated indicator, 1 only where `study_year == 10` (the 2025 study year). Derived from `study_year`, never hand-entered. **Its coefficient is the quantity of interest.** |
+
+The cleaning stage also engineers three fields documented in the schemas above: `duration_min` (warning length, from `expire − issue`) and the `lead0_capped` / `leadtime_capped` flags marking values capped at the 99th percentile per phenomena.
+
+### Dropped in cleaning
+
+Extraction flattens the full COW payload; cleaning then drops fields with no analytic value, removing 15 event columns and 3 storm-report columns (`COWCleaner.EVENTS_DROP_COLS` / `STORMREPORTS_DROP_COLS`). Of the columns that survive, the **Used** column in the schema tables above marks the subset the analysis actually consumes; the rest are retained for context or possible future use. The discarded fields, grouped by reason:
+
+- **Identifiers and free text not used in analysis:** `link`, `product_text`, `product_href`, `visual_imgurl`, `ar_ugc`, `ar_ugcname`.
+- **Redundant after processing:** `statuses` (identical to `status` after deduplication), `stormreports` / `stormreports_all` (the matched-report lists, superseded by the storm-report table), and the storm-report `type` / `magnitude` (superseded by `typetext` / `lsrtype`).
+- **Event-level geometry superseded by point fields or unused:** `lat0`, `lon0`, `perimeter`, `areaverify`, `significance`.
+- **Investigated then dropped:** `fcster`, the forecaster identifier examined as a staffing proxy and abandoned (see [Methodological Notes](#methodological-notes), note 2).
 
 ## Analysis Design
 
-- **Pre/post split:** 2016-2024 baseline, 2025 treatment
-- **Primary metrics:** POD (POD₂), FAR, and lead time advance (LTA), the three NWS GPRA verification metrics
-- **Staffing treatment:** 2025 NWS staffing cuts treated as a system-wide intervention; no WFO-level staffing covariate (see Methodological Notes)
+The analysis (`05_analysis.ipynb`) runs **nine tests**: three phenomena (SV, FF, TO) times three metrics, Probability of Detection (POD), False Alarm Ratio (FAR), and Lead Time Average (LTA), each fit separately and never pooled. Every fit uses the same right-hand side on all ten study years:
 
-The prior analysis (now exploratory, in `04_eda.ipynb`) ran three tests, each calibrated against a null built from the baseline years themselves: (1) a system-wide Feb–June distributional shift in POD/FAR/LTA with volume and issuance-characteristic controls; (2) an office-level placebo with Benjamini-Hochberg FDR correction; and (3) a spatial-clustering test (Moran's I on an H3 hexagonal grid, POD-only). The provisional finding is that severe thunderstorm is the one phenomenon where 2025 stands out beyond natural variation. The rebuilt `05_analysis.ipynb` will likely draw on these methods; it is an empty stub for now.
+```
+outcome ~ C(season_cat) + study_year + is_year10
+```
+
+- `season_cat`: engineered season (Spring/Summer/Fall/Winter), categorical; treatment-anchored boundaries, not month starts (see [Engineered Features](#engineered-features)).
+- `study_year`: numeric 1-based index, 1 (2016) through 10 (2025); absorbs baseline drift across years 1 to 9.
+- `is_year10`: integer 0/1, set to 1 only for 2025. **Its coefficient is the quantity of interest:** how far year 10 departs from the season-adjusted baseline trend, read net of season and net of drift. This is not a flat baseline-versus-2025 comparison.
+
+The three metrics map to three model families:
+
+- **POD** (detection): logistic regression on storm-report rows, outcome `warned`.
+- **FAR** (false alarms): logistic regression on warning rows, outcome `verify`.
+- **LTA** (lead time): ordinary least squares (OLS) on warned storm reports, outcome `leadtime` in minutes.
+
+Logistic coefficients are reported as odds ratios; OLS coefficients are already in minutes.
+
+**The nine `is_year10` departures.** Each cell is the 2025 departure from the season-adjusted baseline trend: odds ratios for POD and FAR (FAR on the false-alarm scale, so >1 means more false alarms), minutes for LTA. Bold marks results significant after Benjamini-Hochberg FDR correction; only these carry forward to the placebo check.
+
+| Metric | SV | TO | FF |
+|---|---|---|---|
+| POD | OR 1.01 (p=0.37) | OR 1.09 (p=0.17) | OR 1.04 (p=0.26) |
+| FAR | **OR 1.15 (p≈1e-17)** | OR 1.03 (p=0.56) | **OR 1.14 (p≈3e-4)** |
+| LTA | −0.2 min (p=0.10) | −0.6 min (p=0.15) | **−13.0 min (p≈2e-13)** |
+
+Of the three FDR survivors, only SV FAR also clears the placebo check; FF FAR and FF LTA do not (see Provisional finding).
+
+**Guards against false positives.** Two checks run alongside the nine tests:
+
+- **Placebo (falsification) test:** drop year 10, then for each interior baseline year refit the same structure with the indicator pointing at that fake year. The real `is_year10` effect is credible only if it stands clearly outside the spread of placebo effects.
+- **Benjamini-Hochberg FDR correction:** the nine p-values are corrected together to control the false-discovery rate at α = 0.05.
+
+**Staffing treatment:** the 2025 cuts are treated as a system-wide intervention; there is no WFO-level staffing covariate (see Methodological Notes).
+
+**Provisional finding.** Across the nine tests, there is no broad evidence that warning performance changed in 2025. Severe-thunderstorm FAR is the one result that stands out beyond natural variation: false-alarm odds up about 15% (95% CI +11.6% to +19.1%, p < 0.001), surviving FDR correction and sitting clearly outside its placebo spread, while SV POD and LTA are unchanged. On the rate scale, the 2025 SV false-alarm rate (0.543) sits about 0.036 above where the season-adjusted baseline trend lands (0.507). Flash-flood FAR and LTA were significant and survived FDR but **failed the placebo check** (baseline years produced effects just as large), so they are not treated as findings. An appendix diagnostic notes that SV warning polygon area (`carea`) also rose about 4% above its baseline trend in 2025, consistent with larger, more precautionary polygons; this is descriptive, not a tenth test. The exploratory groundwork (geographic, seasonal, and distributional EDA) lives in `04_eda.ipynb`.
 
 ## Reproducibility
 
-The cleaned analysis files (`data/03_cleaning/events.csv` and `stormreports.csv`) are not tracked in this repository due to size. Two paths to reproduce them:
+The cleaned analysis files (`data/03_cleaning/events.csv` and `stormreports.csv`) are not tracked in this repository due to size. To reproduce them, re-run the pipeline: run the notebooks in order, `01_collection` → `02_extraction` → `03_cleaning` → `04_eda` → `05_analysis`.
 
-**Option A — Use the published data deposit (recommended)**
+Standard scientific-Python dependencies are assumed (pandas, numpy, scipy, statsmodels, matplotlib). Collection additionally requires `requests`. The spatial exploration in `04_eda.ipynb` requires `geopandas`, and its maps fetch US Census state cartographic boundaries [7] over the network on first run (cached to `data/geo/` thereafter).
 
-The cleaned tables are archived at:
+Notes:
 
-> *Zenodo DOI: [to be added upon paper submission]*
-
-Download the two CSVs and place them in `data/03_cleaning/`. Notebooks `04_eda.ipynb` onward can then be run directly.
-
-Standard scientific-Python dependencies are assumed (pandas, numpy, scipy, statsmodels, matplotlib, requests). The spatial exploration in `04_eda.ipynb` additionally requires `h3` (v4), `geopandas`, and `shapely`, and its maps fetch US Census TIGER state boundaries over the network at run time.
-
-**Option B — Re-run the pipeline**
-
-Run the notebooks in order: `01_collection` → `02_extraction` → `03_cleaning`. Note:
-
-- Collection makes 1,220 API calls (122 WFOs × 10 years) and takes ~40 minutes (~2 sec/file).
-- IEM may backfill or correct LSRs after the fact; results may differ slightly from the published deposit if re-collected on a different date.
-- The published deposit reflects data collected in a single run on June 7, 2026, covering 2016–2025; 2025 is a complete calendar year with no partial-year bias at that date.
-- Nominatim geocoding (used to impute null city/county values in `03_cleaning`) queries the OpenStreetMap API and results may vary over time as OSM data changes.
+- Collection makes one API call per WFO-year (122 WFOs) and takes roughly 40 minutes at about 2 sec/file.
+- The pipeline was last run in full on June 16, 2026, collecting calendar years 2016–2026 for a 2016–2025 study period.
+- IEM may backfill or correct LSRs after the fact, so results may differ slightly if re-collected on a different date.
+- Nominatim geocoding [6] (used to impute null city/county values in `03_cleaning`) queries the OpenStreetMap API and results may vary over time as OSM data changes.
 
 ## Notebooks
 
@@ -150,21 +210,41 @@ Run the notebooks in order: `01_collection` → `02_extraction` → `03_cleaning
 | `01_collection.ipynb` | Fetch raw COW API data for all WFOs and years |
 | `02_extraction.ipynb` | Flatten raw JSON into events and stormreports tables |
 | `03_cleaning.ipynb` | Type casting, null handling, and field normalization |
-| `04_eda.ipynb` | Exploratory data analysis, including the demoted prior tests |
-| `05_analysis.ipynb` | Empty stub; to be rebuilt around a decided story |
-| `06_synthesis.ipynb` | Empty stub; to be rebuilt as the full draft report |
+| `04_eda.ipynb` | Exploratory data analysis: geographic footprint, warning volume, seasonality, and baseline variability |
+| `05_analysis.ipynb` | The nine tests (`is_year10` departure), placebo and FDR guards, and appendix diagnostics |
 
 ## Methodological Notes
 
-1. **LSR underreporting:** LSRs are filed voluntarily; detection metrics should be interpreted as "among reported events." A drop in unwarned reports in 2025 could reflect fewer LSRs filed, not better performance. Test 1 includes an LSR filing-volume control to guard against the crudest form of this artifact.
-2. **No WFO-level staffing covariate:** `fcster` was investigated as a staffing proxy but abandoned — rolling 3-month analysis showed chronic format mixing (badge numbers, last names, initials coexisting) in 118 of 122 WFOs, making unique-count comparisons unreliable. No public WFO-level staffing dataset exists. The analysis treats 2025 as a system-wide treatment without a per-office staffing dose variable.
-3. **Storm-mode and issuance covariates:** `svr_tornado_possible` and `tor_in_svrtorpossible` are SV-warning-specific booleans the forecaster sets at issuance, indicating a concurrent tornado threat. `hailtag`/`windtag` partially address the storm-mode confound (a more intense storm is more likely to verify regardless of staffing). `carea`/`parea`/`sharedborder` are warning-geometry fields that proxy for precautionary issuing behavior and outbreak density; polygon area in particular is used in Test 1 as a control, since a shift toward larger polygons mechanically raises both POD and FAR independent of forecaster skill. These fields are SV-centric; for TO and FF warnings they are structurally null or zero.
+1. **LSR underreporting:** LSRs are filed voluntarily; detection metrics should be interpreted as "among reported events." A drop in unwarned reports in 2025 could reflect fewer LSRs filed, not better performance.
+2. **No WFO-level staffing covariate:** `fcster` was investigated as a staffing proxy but abandoned: rolling 3-month analysis showed chronic format mixing (badge numbers, last names, initials coexisting) in 118 of 122 WFOs, making unique-count comparisons unreliable. No public WFO-level staffing dataset exists. The analysis treats 2025 as a system-wide treatment without a per-office staffing dose variable. Because there is no staffing measure, the design supports an associational finding only; it cannot attribute a 2025 change to staffing.
+3. **Storm-mode and issuance covariates:** `svr_tornado_possible` and `tor_in_svrtorpossible` are SV-warning-specific booleans the forecaster sets at issuance, indicating a concurrent tornado threat. `hailtag`/`windtag` proxy the storm-mode confound (a more intense storm is more likely to verify regardless of staffing). `carea`/`parea`/`sharedborder` are warning-geometry fields that proxy for precautionary issuing behavior and outbreak density; polygon area in particular appears in an appendix diagnostic, since a shift toward larger polygons mechanically raises both POD and FAR independent of forecaster skill. These fields are SV-centric; for TO and FF warnings they are structurally null or zero. They are not covariates in the nine main fits, which use only `C(season_cat) + study_year + is_year10`.
 4. **IEM API field overflow:** A fixed-width serialization bug in the IEM API corrupts adjacent columns when a long `remark` is present, affecting 26 storm report rows across 10 WFOs. Four corruption patterns were identified during EDA (lat0 truncation with and without a clean duplicate, lon0 sign loss, junk state/county) and are repaired in `COWCleaner.repair_malformed_rows()` rather than dropped, preserving 8 rows that would otherwise be lost.
-5. **`lead0` semantics (POD₂, not POD₁):** The COW verification join requires `lsr.valid >= warning.issue` (source: `iem-web-services/cow.py`), so no warning can be verified by an LSR that preceded its issuance, and `lead0` is never negative. `lead0 = int((lsr.valid − warning.issue).total_seconds() / 60)` — integer truncation of sub-60-second differences produces the 5.2% of verified events with `lead0=0`, meaning the warning was issued within the same minute as the LSR. This is **POD₂ semantics** in Brooks & Correia (2018) terms: a warning counts as verified whether it precedes or coincides with the event onset. IEM lead time averages will therefore be slightly higher than POD₁-only LTA estimates (~18.8 min pre-2012, ~15.6 min post-2012 from Brooks & Correia), but the year-over-year comparison remains valid since the definition is consistent across all years.
-6. **Treatment is not a clean step function:** The 2025 staffing reduction unfolded in phases — probationary terminations (February 27), deferred resignations departing (April 1), and a partial rehiring wave (August, after NWS received a public safety exemption) that produced little onboarding within the year. The Feb–June window in Test 1 brackets the first two phases; the year-long treatment assumption is supported by the documentary record.
-7. **Small-sample WFOs and cells:** Offices or grid cells with very few events produce unreliable per-unit statistics. Test 2 imposes a minimum of 10 events per office; Test 3 imposes a minimum of 50 storm reports per hexagonal cell in both periods.
-8. **Non-CONUS offices:** Alaska, Hawaii, Guam, and Puerto Rico have fundamentally different weather patterns. The spatial test (Test 3) is restricted to the contiguous United States; the system-wide and office-level tests include all offices in the cleaned data.
+5. **`lead0` semantics (POD₂, not POD₁):** The COW verification join requires `lsr.valid >= warning.issue` [11], so no warning can be verified by an LSR that preceded its issuance, and `lead0` is never negative. `lead0 = int((lsr.valid − warning.issue).total_seconds() / 60)`, where integer truncation of sub-60-second differences produces the 5.2% of verified events with `lead0=0`, meaning the warning was issued within the same minute as the LSR. This is **POD₂ semantics** in Brooks & Correia (2018) [5] terms: a warning counts as verified whether it is issued before the event begins or after onset but before the event ends, in contrast to POD₁, which credits only warnings issued before onset. IEM lead time averages will therefore be slightly higher than POD₁-only LTA estimates (~18.8 min pre-2012, ~15.6 min post-2012 [5]), but the year-over-year comparison remains valid since the definition is consistent across all years.
+6. **Treatment is not a clean step function:** The 2025 staffing reduction unfolded in phases: probationary terminations beginning February 27 [3], followed through the spring by deferred resignations and buyouts (the agency reported more than 870 buyout volunteers by mid-April) [3]. A partial recovery came late: NWS received a hiring-freeze exemption for 126 positions in June, and an expansion to roughly 450 positions was announced in August, but onboarding lagged and little hiring was completed within the year [13]. The `is_year10` indicator treats 2025 as a single year-long departure; the year-long treatment assumption is supported by the documentary record [14].
+7. **Multiple comparisons:** Nine tests (three metrics times three phenomena) inflate false positives. P-values are corrected together with a Benjamini-Hochberg false-discovery-rate procedure, and the placebo test screens any survivor against the spread of effects from baseline years.
+8. **Office-level heterogeneity is descriptive:** Per-office year-10 effects show meaningful spread for every metric, but the design supports no valid joint test of office-level effects; this spread is reported as a where-to-look signal, not a tested claim.
+9. **Geographic composition is a rival explanation:** The 2025 weather footprint shifted relative to baseline (confirmed in EDA: 2025 severe-storm reports drew from a different regional mix), and the national rate is office-weighted, so a shift in which offices were busy can move a national rate with no change in how anyone warns. This is a live confound for the SV FAR finding, not held fixed. It is narrowed, though not eliminated, by the pattern of results: only SV FAR moved while POD and LTA held, whereas a broad composition shift would tend to move all three metrics together. A false-alarm-specific composition effect cannot be ruled out. An appendix figure documents the year-10 regional mix shift.
+10. **Non-CONUS offices:** Alaska, Hawaii, Guam, and Pago Pago have fundamentally different weather patterns and are clipped out during cleaning (`COWCleaner.clip_to_conus`), keyed on office code (the `NON_CONUS` set in `src/constants.py`). All nine fits are therefore CONUS-only, leaving 116 WFOs.
 
 ## AI Assistance
 
 This project was developed in collaboration with [Claude](https://claude.ai) (Anthropic), an AI assistant. Claude contributed to code architecture and implementation (`src/` classes, cleaning pipeline), data investigation (IEM API field overflow bug, data provenance research, `lead0` semantics), literature search and annotation (`docs/literature.md`), and documentation. All analytical decisions, research direction, and final outputs were made by the author.
+
+## References
+
+The scholarly literature underpinning the study (warning-verification baselines, false-alarm and lead-time research, and the 2025 staffing-cut record) is collected with annotations in [`docs/literature.md`](docs/literature.md). The numbered sources cited in this README:
+
+1. **Iowa Environmental Mesonet (IEM) COW — Storm-Based Warning Verification.** Iowa State University, Department of Agronomy. https://mesonet.agron.iastate.edu/cow/ (accessed June 16, 2026). Primary data source.
+2. **pyWWA — Python NWS Weather Wire/Product parsers.** Open-source project, A. Herzmann (IEM). https://github.com/akrherz/pyWWA. The parser layer that decodes NWS products into the IEM database.
+3. **Dance, S., 2025:** National Weather Service buyouts will leave gaps as storm season ramps up. *The Washington Post*, April 17. https://www.washingtonpost.com/weather/2025/04/16/national-weather-service-buyouts-staff-shortages-trump-administration/. Source for the sub-4,000 headcount and ~20% workforce reduction; see also Dance, S., 2025: *Trump fires hundreds at NOAA, National Weather Service*, Feb. 28, for the February 27 terminations.
+4. **Borenstein, S. (AP), 2025:** Nearly half of National Weather Service offices are critically understaffed, experts warn. *PBS NewsHour*, April 4. https://www.pbs.org/newshour/politics/nearly-half-of-national-weather-service-offices-are-critically-understaffed-experts-warn. Source for the ~19% March 2025 vacancy rate and 55-of-122 offices at or above 20% vacancy.
+5. **Brooks, H. E., and J. Correia Jr., 2018:** Long-Term Performance Metrics for National Weather Service Tornado Warnings. *Weather and Forecasting*, 33(6), 1601–1614. https://doi.org/10.1175/WAF-D-18-0120.1. Source for the POD₁/POD₂ distinction and the lead-time reference figures.
+6. **Nominatim / OpenStreetMap.** OpenStreetMap contributors. https://nominatim.org/. Used to impute null city/county values during cleaning.
+7. **U.S. Census Bureau TIGER/Line cartographic boundaries.** https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html. State boundaries for the exploratory maps.
+8. **Stumpf, G. J., and A. E. Gerard, 2021:** National Weather Service Severe Weather Warnings as Threats-in-Motion. *Weather and Forecasting*, 36(2), 627–643. https://doi.org/10.1175/WAF-D-20-0159.1. Verification methodology underlying the COW polygon-based metrics.
+9. **Stumpf, G. J., and S. M. Stough, 2024:** A Geospatial Verification Method for Severe Convective Weather Warnings: Implications for Current and Future Warning Methods. *Weather and Forecasting*, 39(5), 689–710. https://doi.org/10.1175/WAF-D-23-0153.1. Geospatial verification method extending Stumpf and Gerard (2021); relevant to the COW spatial verification approach.
+10. **Iowa Environmental Mesonet — Datasets and data ingest.** Iowa State University, Department of Agronomy. https://mesonet.agron.iastate.edu/info/datasets/. Documents the NOAAPort satellite feed as IEM's primary product source and the LDM/pyWWA ingest path.
+11. **IEM COW verification source code.** `iem-web-services`, A. Herzmann (IEM). https://github.com/akrherz/iem-web-services (`src/iemws/services/cow.py`, `sbw_verify`). The verification-join implementation: buffered point-in-polygon match with `valid >= issue` and `valid <= expire`, and `leadtime = int((valid − issue) / 60)`.
+12. **National Weather Service — Forecasts and Service.** NOAA / National Weather Service. https://www.weather.gov/about/forecastsandservice. Official NWS operational scale: 122 Weather Forecast Offices nationally.
+13. **Jones, J., 2025:** Weather Service Is Hiring Hundreds After Sweeping Cuts Earlier This Year. *The New York Times*, August 7. https://www.nytimes.com/2025/08/07/weather/nws-hiring-doge-cuts.html. Source for the June hiring-freeze exemption (126 positions), the August expansion to roughly 450 positions, and the limited progress filling those jobs within the year.
+14. **Natanson, H., and B. Dennis, 2025:** National Weather Service at 'breaking point' as storm approaches. *The Washington Post*, September 27. https://www.washingtonpost.com/politics/2025/09/27/national-weather-service-staffing-crisis. Source for the persistence of staffing shortfalls (double shifts, buddy-system coverage, curtailed services) through the year, supporting the year-long treatment assumption.
