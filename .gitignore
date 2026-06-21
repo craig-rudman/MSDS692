@@ -7,6 +7,9 @@
 data/01_collection/
 data/02_extraction/
 data/03_cleaning/
+# Geocode cache: local-only derived artifact. Safe to commit if you want
+# reruns to skip the Nominatim calls, but ignored here for consistency.
+data/cache/
 
 # Python artifacts
 *.pyc

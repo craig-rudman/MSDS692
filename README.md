@@ -1,14 +1,6 @@
 # Examining the Public Record: NWS Warning Performance Under the 2025 Staffing Cuts
 
-An MSDS692 data science practicum investigating whether the 2025 National Weather Service (NWS) staffing reductions changed the quality of public weather warnings. The project is framed as an exercise in **examining the public record**: a demonstration that an accountability question can be raised rigorously, from public records, by someone outside the agency, at a moment when the institutions that would ordinarily evaluate such a claim (internal review, inspectors general, congressional oversight, the press) were themselves weakened or constrained.
-
-The analysis uses the agency's own verification metrics, computed from a decade of public warning records, and tests whether 2025 departs from a 2016–2024 baseline. The interpretive stance is fixed throughout: a change coincident with the staffing timeline **raises the question** against the public record; it does not establish cause.
-
-> **Status: rebaseline in progress.** The project has been reset to a clean exploratory state to be rebuilt around a decided analytical story. The collection, extraction, and cleaning stages (`01`–`03`) are stable. All prior analysis now lives, demoted to exploratory, in [`notebooks/04_eda.ipynb`](notebooks/04_eda.ipynb); `05_analysis.ipynb` and `06_synthesis.ipynb` are empty stubs awaiting the rebuild. Treat the figures and results below as provisional.
-
-**Provisional signal.** In exploratory work, **severe thunderstorm** warnings are the one phenomenon where 2025 stands out beyond ordinary year-to-year variation, a coherent shift toward more and larger warnings (probability of detection up, false alarms up, lead time steady, polygons larger), concentrated geographically. Tornado and flash flood show isolated or no system-level anomalies. This is a documented, reproducible signal that motivates the rebuilt analysis, not a confirmed finding and not a finding of cause.
-
-The full write-up will live in [`notebooks/06_synthesis.ipynb`](notebooks/06_synthesis.ipynb) (the draft report, Sections I–X); it is currently a stub.
+An MSDS692 data science practicum investigating whether the 2025 National Weather Service (NWS) staffing reductions changed the quality of public weather warnings.  The analysis uses the agency's own verification metrics, computed from a decade of public warning records, and tests whether 2025 departs from a 2016–2024 baseline. Any changes coincident with the staffing timeline raises the question against the public record, but it does not establish cause.
 
 ## Research Question
 
@@ -27,10 +19,10 @@ Did NWS staffing cuts in 2025 result in statistically significant changes in war
 
 The COW API is a read-through of official NWS operational data; IEM introduces no modeled or derived fields beyond the verification join. The full ingestion chain is:
 
-1. **NOAAPort / NOAA Satellite Broadcast Network (SBN)** — NWS issues warning and LSR text products operationally; they are broadcast in real time over the NOAA satellite network.
-2. **Unidata LDM** — Iowa State subscribes to the NOAAPort feed via Unidata's Logical Data Manager, receiving the full NWS product stream.
-3. **pyWWA parsers** — IEM's open-source [pyWWA](https://github.com/akrherz/pyWWA) project runs daemon parsers that decode incoming products and write them to the IEM PostgreSQL database: `vtec_parser.py` → `sbw` table (Storm-Based Warning polygons); `lsr_parser.py` → `lsrs` table (Local Storm Reports).
-4. **COW verification join** — `iem-web-services/src/iemws/services/cow.py` queries `sbw` and `lsrs`, spatially matches LSRs to warning polygons, and applies the time constraint `lsr.valid >= warning.issue AND lsr.valid <= warning.expire`. `lead0` is computed as `int((lsr.valid − warning.issue).total_seconds() / 60)`.
+1. **NOAAPort / NOAA Satellite Broadcast Network (SBN)** NWS issues warning and LSR text products operationally; they are broadcast in real time over the NOAA satellite network.
+2. **Unidata LDM** Iowa State subscribes to the NOAAPort feed via Unidata's Logical Data Manager, receiving the full NWS product stream.
+3. **pyWWA parsers** — IEM's open-source [pyWWA](https://github.com/akrherz/pyWWA) project runs daemon parsers that decode incoming products and write them to the IEM database
+4. **COW verification join** The verification software matches each storm report to a warning when the report falls inside the warning's polygon and occurs while that warning is active (at or after issuance, before expiration).
 
 Because the source is the live NWS operational product stream (not NCEI archives or reanalysis), event and LSR records match what forecasters actually issued and received in real time.
 

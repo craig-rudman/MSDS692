@@ -4,14 +4,12 @@
 # Single source of truth for project-wide constants used across
 # 04_eda.ipynb, 05_analysis.ipynb, and 06_synthesis.ipynb.
 
-import pandas as pd
-
 # ── WFO filters ───────────────────────────────────────────────────────────────
 
-NON_CONUS = {"GUM", "HFO", "AFC", "AJK", "PPG", "AFG", "AER"}
-
-# Offices documented as losing overnight coverage (WaPo May 16, 2025 + follow-up)
-OVERNIGHT_CLOSED = {"GLD", "JKL", "HNX", "STO", "CYS", "PAH", "MQT"}
+# Re-exported from the project-wide module so the non-CONUS office list and the
+# treatment-anchor date live in exactly one place (src/constants.py), shared with
+# the cleaning stage.
+from src.constants import NON_CONUS, CUT_DATE
 
 # ── Phenomena ─────────────────────────────────────────────────────────────────
 
@@ -23,16 +21,19 @@ PHENOMENA_LABELS = {
     "FF": "Flash Flood",
 }
 
-# ── Treatment timeline ────────────────────────────────────────────────────────
+# ── Study-year calendar mapping ───────────────────────────────────────────────
 
-# Feb 27 2025: probationary terminations
-CUT_DATE = pd.Timestamp("2025-02-27", tz="UTC")
+# Study year is a 1-based treatment-relative index: study year 1 is calendar 2016,
+# study year 10 is calendar 2025. Add this offset to convert a study year to its
+# calendar year for axis labelling. The models still use the numeric study_year;
+# only the displayed axis is in calendar terms.
+STUDY_YEAR_OFFSET = 2015
 
-# Apr 1 2025: deferred resignations effective — operationally most significant phase
-DEPART_DATE = pd.Timestamp("2025-04-01", tz="UTC")
 
-# Aug 1 2025: hiring exemption announced — not a recovery (vacancies persisted through Dec)
-REHIRE_DATE = pd.Timestamp("2025-08-01", tz="UTC")
+def study_year_to_calendar(study_year):
+    """Convert a 1-based study year (or array of them) to its calendar year."""
+    return study_year + STUDY_YEAR_OFFSET
+
 
 # ── Plot styling ──────────────────────────────────────────────────────────────
 
@@ -41,13 +42,6 @@ PHENOMENA_COLORS = {
     "TO": "#4a90d9",
     "SV": "#e07b39",
     "FF": "#5aab61",
-}
-
-# LSR geography maps (01b, 09a, 09b) use a different palette to distinguish type
-LSR_COLORS = {
-    "TO": "#d62728",
-    "SV": "#bcbd22",
-    "FF": "#1f77b4",
 }
 
 LSR_SIZES = {
@@ -59,7 +53,3 @@ LSR_SIZES = {
 # CONUS bounding box for geographic plots
 CONUS_XLIM = (-125, -66)
 CONUS_YLIM = (24, 50)
-
-# FIPS codes to exclude when clipping Census TIGER boundaries to CONUS
-# (AK, HI, and US territories)
-CONUS_FIPS_EXCLUDE = {"02", "15", "60", "66", "69", "72", "78"}
