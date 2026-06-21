@@ -6,10 +6,13 @@
 
 # ── WFO filters ───────────────────────────────────────────────────────────────
 
-# Re-exported from the project-wide module so the non-CONUS office list and the
-# treatment-anchor date live in exactly one place (src/constants.py), shared with
-# the cleaning stage.
-from src.constants import NON_CONUS, CUT_DATE
+# Re-exported from the project-wide module so the non-CONUS office list lives in
+# exactly one place (src/constants.py), shared with the cleaning stage.
+# 05_analysis.ipynb imports NON_CONUS from here; __all__ marks it as an
+# intentional re-export, not a stray import.
+from src.constants import NON_CONUS
+
+__all__ = ["NON_CONUS"]
 
 # ── Phenomena ─────────────────────────────────────────────────────────────────
 
