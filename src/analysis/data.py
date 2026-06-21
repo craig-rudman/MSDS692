@@ -140,25 +140,28 @@ def _geocode_address(addr: dict, zcta: dict) -> tuple[float, float]:
     raise ValueError(f"No street match and no ZCTA centroid for office address: {addr}")
 
 
-def load_wfo_coords(geo_dir: Path, wfos) -> pd.DataFrame:
-    """Load office (WFO) building coordinates, caching to geo_dir.
+def load_wfo_coords(coords_path: Path, geo_dir: Path, wfos) -> pd.DataFrame:
+    """Load office (WFO) building coordinates, caching to coords_path.
 
     Warnings are areas, not points, so the cleaned tables carry no office
     location. For each office this reads the street address from the NWS API
     (https://api.weather.gov/offices/{wfo}) and forward-geocodes it with the US
     Census geocoder to the office building's latitude/longitude. Results cache to
-    `wfo_coords.csv` thereafter, mirroring load_states' cache-or-fetch pattern;
-    only offices not already cached are fetched.
+    `coords_path` thereafter, mirroring load_states' cache-or-fetch pattern;
+    only offices not already cached are fetched. The geocoded coordinates are a
+    tracked input (data/wfo/), so coords_path is kept distinct from geo_dir,
+    which holds only the regenerable Census ZIP-centroid fallback.
 
     Args:
-        geo_dir: Directory to cache wfo_coords.csv in (created if absent).
+        coords_path: Path to the wfo_coords.csv cache (parent created if absent).
+        geo_dir: Directory holding the regenerable ZCTA fallback zip.
         wfos: Iterable of WFO codes to resolve (the in-scope office set).
 
     Returns:
         DataFrame with columns wfo, lat, lon, one row per requested office.
     """
-    geo_dir.mkdir(parents=True, exist_ok=True)
-    dst = geo_dir / "wfo_coords.csv"
+    coords_path.parent.mkdir(parents=True, exist_ok=True)
+    dst = coords_path
     cache = (pd.read_csv(dst) if dst.exists()
              else pd.DataFrame(columns=["wfo", "lat", "lon"]))
 
