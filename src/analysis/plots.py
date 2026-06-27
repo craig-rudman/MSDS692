@@ -86,6 +86,45 @@ def plot_wfo_volume(events, wfo_coords, states, img_dir: Path):
     plt.show()
 
 
+def plot_wfo_ranking(events, img_dir: Path, top_n: int = 20):
+    """Single-panel horizontal bar chart of the busiest offices by warning volume.
+
+    Ranks Weather Forecast Offices (WFOs) by total warnings issued (all three
+    event types pooled) and draws the top `top_n` as horizontal bars, busiest at
+    top. The title states the concentration shares (top 5, top `top_n`, and the
+    bottom half of offices) so the skew reads as a number, not just a shape. This
+    is the ranked companion to the volume map: the map shows where, this names who.
+    Saves to `04_wfo_ranking.png`.
+
+    Args:
+        events: Cleaned events DataFrame (one row per warning).
+        img_dir: Directory to save the figure in.
+        top_n: Number of busiest offices to draw.
+    """
+    counts = events["wfo"].value_counts()
+    total = len(events)
+    top = counts.head(top_n).iloc[::-1]  # reverse so the busiest sits at the top
+
+    top5 = 100 * counts.head(5).sum() / total
+    topn = 100 * counts.head(top_n).sum() / total
+    half = 100 * counts[counts.rank(pct=True) <= 0.5].sum() / total
+
+    fig, ax = plt.subplots(figsize=(8, 6.5))
+    ax.barh(top.index, top.values, color="#4a6fa5", alpha=0.85,
+            edgecolor="#2a3f5a", linewidth=0.5)
+    for wfo, n in top.items():
+        ax.text(n, wfo, f" {n:,}", va="center", ha="left", fontsize=8, color="#333")
+    ax.margins(x=0.12)
+    ax.set_xlabel("warnings issued (all event types)")
+    ax.set_ylabel("office (WFO)")
+    ax.set_title(f"Busiest offices by warning volume ({counts.size} WFOs, {total:,} warnings)\n"
+                 f"top 5 issue {top5:.0f}%, top {top_n} issue {topn:.0f}%, "
+                 f"bottom half of offices issue {half:.0f}%", fontsize=10)
+    fig.tight_layout()
+    fig.savefig(img_dir / "04_wfo_ranking.png", dpi=120, bbox_inches="tight")
+    plt.show()
+
+
 def plot_coverage(stormreports, states, t: str, img_dir: Path):
     """Single-panel log-colored hexbin of storm-report density for one event type.
 
@@ -213,7 +252,7 @@ def plot_baseline_trend(raw_yearly, trend: dict, t: str, title: str, ylabel: str
     ax.axhline(flat, color="#888", ls=":", lw=1.2, zorder=2,
                label="flat baseline mean (season-adjusted)")
     ax.set_xticks(cal_yrs)
-    ax.set_xlabel("calendar year (baseline, 2016-2024)")
+    ax.set_xlabel("study year")
     ax.set_ylabel(ylabel)
     ax.set_title(f"Trend vs. flat mean across the baseline: {title}", fontsize=10)
     ax.legend(loc="best", **LEGEND_KW)
@@ -277,7 +316,7 @@ def plot_year10_departure(raw_yearly, trend: dict, y10_actual: float, t: str,
     ax.scatter([cal_y10], [y10_actual], color="#c0392b", s=45, zorder=6,
                label=f"2025 actual ({y10_actual - y10_pred:+.3f} vs. trend)")
     ax.set_xticks(list(cal_yrs) + [cal_y10])
-    ax.set_xlabel("calendar year (2016-2024 baseline, 2025 = treatment year)")
+    ax.set_xlabel("study year")
     ax.set_ylabel(ylabel)
     ax.set_title(f"Year-10 departure from the baseline trend: {title}", fontsize=10)
     ax.legend(loc="best", **LEGEND_KW)
@@ -619,4 +658,122 @@ def plot_placebo_normalized(frame: "pd.DataFrame", img_dir: Path):
     ax.legend(handles=[h_fdr, h_ring, h_pl, band], loc="upper right", **LEGEND_KW)
     fig.tight_layout()
     fig.savefig(img_dir / "05_placebo_normalized.png", dpi=120, bbox_inches="tight")
+    plt.show()
+
+
+def plot_outbreak_day(reports, all_reports, states, outbreak_id, day: str,
+                      img_dir: Path, event_type: str = "SV"):
+    """Single-panel CONUS map of the largest weather outbreak on one convective day.
+
+    Illustrates the unit the appendix clusters on: the reports belonging to the single
+    biggest outbreak of a chosen convective day, drawn on the CONUS basemap and colored
+    by phenomenon (canonical PHENOMENA_COLORS). The outbreak is defined on the
+    severe-storm (`event_type`) reports; the tornado and flash-flood reports falling in
+    the same offices that day are overlaid in their own colors as context, since a major
+    severe-weather day produces all three hazards from one system. This is an
+    illustrative figure, not a test: the day is drawn from year 10 only to show what an
+    outbreak looks like, and the chosen day is intentionally a continental case so the
+    connected-components linkage's chaining (a long frontal system merged into one
+    outbreak across far-apart offices) is visible rather than hidden. Saves to
+    `05_appendix_outbreak_map_{event_type}.png`.
+
+    Args:
+        reports: Severe-storm reports for the event type (carries the outbreak id), with
+            `wfo`, the convective-day key, `lon0`, `lat0`, `lsrtype`.
+        all_reports: All storm reports (all phenomena) carrying the same convective-day
+            key, so the in-footprint tornado and flash-flood reports can be overlaid.
+        states: CONUS state-boundary GeoDataFrame from data.load_states.
+        outbreak_id: Outbreak id aligned to `reports` (from cluster.build_outbreaks).
+        day: Convective-day key to plot (e.g. "2025-05-16"), matching the `cday` column.
+        img_dir: Directory to save the figure in.
+        event_type: Event-type code the outbreaks were built on (default "SV").
+    """
+    sv_day = reports.assign(_ob=outbreak_id)
+    sv_day = sv_day[sv_day["cday"] == day]
+    top = sv_day["_ob"].value_counts().idxmax()
+    offices = sorted(sv_day.loc[sv_day["_ob"] == top, "wfo"].unique())
+    n_reports = int((sv_day["_ob"] == top).sum())
+
+    # Reports of every phenomenon in the outbreak's offices that day: SV is the outbreak
+    # itself; TO and FF are the companion hazards from the same system, shown for context.
+    in_footprint = all_reports[(all_reports["cday"] == day)
+                               & (all_reports["wfo"].isin(offices))]
+
+    fig, ax = plt.subplots(figsize=(11, 6.5))
+    states.boundary.plot(ax=ax, color="#bbb", linewidth=0.6, zorder=1)
+    # Plot high-volume to low-volume so the sparse hazards land on top and stay visible.
+    for t in ["SV", "FF", "TO"]:
+        g = in_footprint[in_footprint["lsrtype"] == t]
+        ax.scatter(g["lon0"], g["lat0"], s=14, color=PHENOMENA_COLORS[t], alpha=0.8,
+                   zorder=2, label=f"{PHENOMENA_LABELS[t]} ({t}), n={len(g):,}")
+    ax.set_xlim(*CONUS_XLIM); ax.set_ylim(*CONUS_YLIM)
+    ax.set_axis_off()
+    ax.set_title(f"Largest {PHENOMENA_LABELS[event_type].lower()} outbreak, {day}: "
+                 f"{n_reports:,} reports across {len(offices)} linked offices", fontsize=10)
+    ax.legend(loc="lower left", **LEGEND_KW)
+    fig.tight_layout()
+    fig.savefig(img_dir / f"05_appendix_outbreak_map_{event_type}.png",
+                dpi=120, bbox_inches="tight")
+    plt.show()
+
+
+def plot_se_inflation(rows: list, event_type: str, img_dir: Path):
+    """Single-panel view of how storm clustering widens the year-10 interval.
+
+    For each metric of one event type, draws the `is_year10` Wald interval twice on a
+    shared standardized (coefficient / standard error) axis: a thin grey whisker for
+    the naive (independence) fit and a thick event-colored whisker for the cluster-robust
+    fit, both centered on the same point estimate. Standardizing to coef/SE lets the
+    binary metrics (log-odds) and lead time (minutes) share one axis, and puts the
+    reading in units of significance: a whisker crossing the shaded |z| < 1.96 band is
+    not significant at 0.05. The clustered whisker is always the wider of the pair, so
+    the figure shows at a glance that respecting outbreaks inflates every interval while
+    leaving the estimate in place, and which findings still clear the band afterward.
+    Saves to `05_appendix_se_inflation_{event_type}.png`.
+
+    Args:
+        rows: One dict per metric (output of `cluster.clustered_year10`, with the
+            metric label added as "metric"); each carries coef, naive_se, clustered_se,
+            and se_inflation.
+        event_type: Event-type code (e.g. "SV"), for color and filename.
+        img_dir: Directory to save the figure in.
+    """
+    color = PHENOMENA_COLORS[event_type]
+    ypos = list(range(len(rows)))[::-1]  # first metric at top
+    fig, ax = plt.subplots(figsize=(7.5, 0.9 * len(rows) + 1.8))
+
+    band = ax.axvspan(-1.96, 1.96, color="#eeeeee", zorder=0,
+                      label="|z| < 1.96 (approx. .05)")
+    for edge in (-1.96, 1.96):
+        ax.axvline(edge, color="#bbb", lw=0.8, ls="--", zorder=1)
+    ax.axvline(0.0, color="#888", lw=1, zorder=1)
+
+    for y, r in zip(ypos, rows):
+        z_naive = r["coef"] / r["naive_se"]
+        z_clust = r["coef"] / r["clustered_se"]
+        z_point = z_naive  # both intervals are centered on the same coefficient
+        # Naive interval is +/- 1.96 in its own SE units; on the coef/naive_se axis that is
+        # the point +/- 1.96. The clustered interval is wider by the inflation factor.
+        ax.plot([z_point - 1.96, z_point + 1.96], [y + 0.12, y + 0.12],
+                color="#999", lw=2, zorder=2)
+        half = 1.96 * r["se_inflation"]
+        ax.plot([z_point - half, z_point + half], [y - 0.12, y - 0.12],
+                color=color, lw=4, zorder=2)
+        ax.scatter([z_point], [y], s=55, color=color, zorder=4, edgecolor="#222")
+        ax.text(z_point, y + 0.34, f"x{r['se_inflation']:.1f} SE",
+                ha="center", va="bottom", fontsize=8, color="#444")
+
+    ax.set_yticks(ypos)
+    ax.set_yticklabels([r["metric"] for r in rows])
+    ax.set_xlabel("standardized is_year10 effect  (coefficient / standard error)")
+    ax.set_title(f"{PHENOMENA_LABELS[event_type]}: year-10 interval, naive vs "
+                 f"outbreak-clustered", fontsize=10)
+    ax.margins(y=0.2)
+
+    h_naive = ax.plot([], [], color="#999", lw=2, label="naive (independence)")[0]
+    h_clust = ax.plot([], [], color=color, lw=4, label="cluster-robust (outbreak)")[0]
+    ax.legend(handles=[h_naive, h_clust, band], loc="best", **LEGEND_KW)
+    fig.tight_layout()
+    fig.savefig(img_dir / f"05_appendix_se_inflation_{event_type}.png",
+                dpi=120, bbox_inches="tight")
     plt.show()

@@ -1,6 +1,6 @@
 # Examining the Public Record: NWS Warning Performance Under 2025 Staffing Cuts
 
-In early 2025 the Trump administration moved to shrink the federal workforce, directing agency heads to fire probationary employees across the government and offering federal buyouts. Beginning February 27, 2025, those reductions cut staff across the National Weather Service (NWS), and through a spring of probationary terminations and buyouts the agency's headcount fell below 4,000 for the first time in its modern history, roughly 20 percent smaller than at the start of the year. By March 2025 about 19 percent of forecaster positions were vacant, with 55 of 122 forecast offices at or above a 20 percent vacancy rate [3], [4].
+In early 2025 the Trump administration moved to shrink the federal workforce, directing agency heads to fire probationary employees across the government and offering federal buyouts. Beginning February 27, 2025, those reductions cut staff across the National Weather Service (NWS), and through a series of terminations and buyouts, the agency's headcount fell below 4,000 for the first time in its modern history, roughly 20 percent smaller than at the start of the year. By March 2025 about 19 percent of forecaster positions were vacant, with 55 of 122 forecast offices at or above a 20 percent vacancy rate [3], [4].
 
 A data science practicum investigating whether those staffing reductions changed the quality of public weather warnings. The analysis uses the agency's own quality metrics, computed from a decade of public warning records, and tests whether 2025 (year 10) departs from the season-adjusted trend fit over the 2016–2024 baseline. The departure is the quantity of interest. Any change coincident with the staffing timeline raises the question against the public record, but it does not establish cause.
 
@@ -176,7 +176,7 @@ Logistic coefficients are reported as odds ratios; OLS coefficients are already 
 | Metric | SV | TO | FF |
 |---|---|---|---|
 | POD | OR 1.01 (p=0.37) | OR 1.09 (p=0.17) | OR 1.04 (p=0.26) |
-| FAR | **OR 1.15 (p≈1e-17)** | OR 1.03 (p=0.56) | **OR 1.14 (p≈3e-4)** |
+| FAR | **OR 1.15 (p≈1e-17)** | OR 1.03 (p=0.56) | **OR 0.87 (p≈3e-4)** |
 | LTA | −0.2 min (p=0.10) | −0.6 min (p=0.15) | **−13.0 min (p≈2e-13)** |
 
 Of the three FDR survivors, only SV FAR also clears the placebo check; FF FAR and FF LTA do not (see Provisional finding).
@@ -225,6 +225,7 @@ Notes:
 8. **Office-level heterogeneity is descriptive:** Per-office year-10 effects show meaningful spread for every metric, but the design supports no valid joint test of office-level effects; this spread is reported as a where-to-look signal, not a tested claim.
 9. **Geographic composition is a rival explanation:** The 2025 weather footprint shifted relative to baseline (confirmed in EDA: 2025 severe-storm reports drew from a different regional mix), and the national rate is office-weighted, so a shift in which offices were busy can move a national rate with no change in how anyone warns. This is a live confound for the SV FAR finding, not held fixed. It is narrowed, though not eliminated, by the pattern of results: only SV FAR moved while POD and LTA held, whereas a broad composition shift would tend to move all three metrics together. A false-alarm-specific composition effect cannot be ruled out. An appendix figure documents the year-10 regional mix shift.
 10. **Non-CONUS offices:** Alaska, Hawaii, Guam, and Pago Pago have fundamentally different weather patterns and are clipped out during cleaning (`COWCleaner.clip_to_conus`), keyed on office code (the `NON_CONUS` set in `src/constants.py`). All nine fits are therefore CONUS-only, leaving 116 WFOs.
+11. **Storm clustering and clustered standard errors:** Records are not independent: a single severe-weather outbreak deposits dozens to hundreds of correlated reports in one office on one day, so the main fits' naive standard errors understate uncertainty. A robustness check (severe storm only, the worst case for non-independence) refits the three SV models with cluster-robust standard errors at the weather-outbreak level. Outbreaks are built on the report table by linking offices whose report centroids fall within 300 km on a noon-to-noon convective day (`src/analysis/cluster.py`); warnings, which carry no point coordinate, are routed onto the same outbreaks by office and convective day. Clustering inflates every SV standard error about three to four times and moves no point estimate: SV FAR survives (odds still up about 15%, p about 0.005 rather than the naive 1e-17), while SV POD and LTA were never significant and remain so. This addresses non-independence only, not the geographic-composition or ground-truth cautions above; the 300 km radius and convective-day cutoff are stated choices, and the full treatment across all phenomena with threshold sensitivity is left to future work.
 
 ## AI Assistance
 

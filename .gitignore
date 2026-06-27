@@ -14,6 +14,9 @@ data/cache/
 # wfo_coords.csv rebuilds via the NWS + Census geocoder APIs. Local-only.
 data/geo/
 
+# Personal study guide — local only, not part of the deliverable
+report/defense_study_guide.html
+
 # Python artifacts
 *.pyc
 __pycache__/
